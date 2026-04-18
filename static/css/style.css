@@ -1,0 +1,236 @@
+/* Global Styles */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    color: #333;
+    line-height: 1.6;
+}
+
+.navbar {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    box-shadow: 0 4px 6px rgba(0,0,0,.1);
+    border: none;
+}
+
+.navbar-brand {
+    font-weight: bold;
+    font-size: 1.5rem;
+}
+
+.navbar-nav .nav-link {
+    font-weight: 500;
+    transition: color 0.3s ease;
+}
+
+.navbar-nav .nav-link:hover {
+    color: #ffd700 !important;
+}
+
+.card {
+    box-shadow: 0 4px 8px rgba(0,0,0,.1);
+    border: none;
+    border-radius: 10px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 16px rgba(0,0,0,.2);
+}
+
+.jumbotron {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 15px;
+    padding: 3rem;
+    margin-bottom: 2rem;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    border-radius: 25px;
+    padding: 10px 30px;
+    font-weight: 600;
+    transition: transform 0.3s ease;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+    transform: scale(1.05);
+}
+
+.section {
+    padding: 4rem 0;
+}
+
+.section h2 {
+    font-weight: 700;
+    margin-bottom: 2rem;
+    color: #333;
+}
+
+.footer {
+    background: #343a40;
+    color: white;
+    padding: 2rem 0;
+    margin-top: 4rem;
+}
+
+/* Dashboard Styles */
+.dashboard-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 10px;
+    margin-bottom: 2rem;
+}
+
+.sidebar {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 1rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,.1);
+}
+
+.admin-sidebar {
+    background: #f4f5ff;
+    border-radius: 16px;
+    padding: 1.25rem;
+    box-shadow: 0 18px 40px rgba(46, 56, 96, 0.08);
+}
+
+.admin-sidebar h5 {
+    font-weight: 700;
+    margin-bottom: 1rem;
+}
+
+.admin-sidebar .list-group-item {
+    border: none;
+    border-radius: 10px;
+    margin-bottom: 0.65rem;
+    padding: 1rem 1rem;
+    transition: background-color 0.3s ease, transform 0.3s ease;
+}
+
+.admin-sidebar .list-group-item:hover {
+    background-color: #667eea;
+    color: white;
+    transform: translateX(4px);
+}
+
+.sidebar .list-group-item {
+    border: none;
+    border-radius: 5px;
+    margin-bottom: 0.5rem;
+    transition: background-color 0.3s ease;
+}
+
+.sidebar .list-group-item:hover {
+    background-color: #667eea;
+    color: white;
+}
+
+.stats-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.stats-card h3 {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+.stats-card p {
+    margin: 0;
+    opacity: 0.9;
+}
+
+/* Animations */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in-up {
+    animation: fadeInUp 0.6s ease-out;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .jumbotron {
+        padding: 2rem;
+    }
+    .section {
+        padding: 2rem 0;
+    }
+}
+
+/* Admin Dashboard */
+.admin-header {
+    background: linear-gradient(135deg, #2d4071 0%, #4b6cb7 100%);
+    color: #fff;
+    border-radius: 16px;
+    padding: 2.5rem;
+    margin-bottom: 2rem;
+}
+
+.admin-header h1,
+.admin-header p {
+    color: #fff;
+}
+
+.admin-stats .card {
+    background: linear-gradient(135deg, #5865f2 0%, #2d4071 100%);
+    color: #fff;
+    border: none;
+}
+
+.admin-stats .card .card-body {
+    padding: 1.8rem;
+}
+
+.admin-panel .card {
+    border-radius: 16px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+}
+
+.admin-panel .table thead {
+    background: rgba(102, 126, 234, 0.15);
+}
+
+.admin-panel .table tbody tr:hover {
+    background: rgba(102, 126, 234, 0.08);
+}
+
+.tag-status {
+    border-radius: 999px;
+    padding: 0.35rem 0.9rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.tag-pending { background: #ffc107; color: #212529; }
+.tag-approved { background: #198754; color: #fff; }
+.tag-review { background: #0dcaf0; color: #0a58ca; }
+.tag-awaiting { background: #fd7e14; color: #fff; }
+
+.admin-activity .list-group-item {
+    border: none;
+    border-radius: 12px;
+    margin-bottom: 0.75rem;
+    transition: transform 0.2s ease;
+}
+
+.admin-activity .list-group-item:hover {
+    transform: translateX(6px);
+}
