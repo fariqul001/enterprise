@@ -14,11 +14,11 @@ from django.db import models
 from django.utils import timezone
 import json
 from .forms import CustomUserCreationForm, InvestorKYCForm, ProfileForm, FundForm, InvestmentForm, PaymentForm
-from .models import CustomUser, InvestorKYC, InvestorAgreement, Fund, Investment, Installment, Payment
+from .models import CustomUser, InvestorKYC, InvestorAgreement, Fund, Investment, Installment, Payment, Transaction
 from fpdf import FPDF
 from django.core.mail import EmailMessage
-
-
+from .sslcommerz import initiate_payment
+from django.views.decorators.csrf import csrf_exempt
 
 def home(request):
     return render(request, 'accounts/home.html')
@@ -370,43 +370,88 @@ def create_agreement_pdf(kyc):
 
 @login_required
 def profile(request):
+    user = request.user
+    kyc = getattr(user, 'kyc', None)
+
     if request.method == 'POST':
-        form = ProfileForm(request.POST, instance=request.user)
+        form = ProfileForm(request.POST, instance=user)
         if form.is_valid():
             form.save()
             messages.success(request, 'Profile updated successfully!')
             return redirect('accounts:profile')
     else:
-        form = ProfileForm(instance=request.user)
-    return render(request, 'accounts/profile.html', {'form': form})
+        form = ProfileForm(instance=user)
 
+    total_invested = Investment.objects.filter(
+        investor=user
+    ).aggregate(total=models.Sum('amount'))['total'] or 0
+
+    total_funds = Investment.objects.filter(investor=user).count()
+
+    total_payments = Payment.objects.filter(
+        investor=user,
+        status='completed'
+    ).aggregate(total=models.Sum('amount'))['total'] or 0
+
+    context = {
+        'form': form,
+        'kyc': kyc,
+        'total_invested': total_invested,
+        'total_funds': total_funds,
+        'total_payments': total_payments,
+    }
+
+    return render(request, 'accounts/profile.html', context)
 @login_required
 def fund_list(request):
     funds = Fund.objects.all()
     return render(request, 'accounts/fund_list.html', {'funds': funds})
 
-@login_required
 def invest_in_fund(request, pk):
     if request.user.role == 'viewer':
         messages.error(request, 'Please complete KYC to invest in funds.')
         return redirect('accounts:apply_kyc')
 
     fund = get_object_or_404(Fund, pk=pk)
+
     if request.method == 'POST':
         form = InvestmentForm(request.POST)
+
         if form.is_valid():
             investment = form.save(commit=False)
+
+            # assign from URL (NOT FORM)
             investment.investor = request.user
             investment.fund = fund
+            investment.status = 'pending'
+
+            # validation
+            if investment.amount < fund.minimum_investment:
+                messages.error(
+                    request,
+                    f'Minimum investment for this fund is ${fund.minimum_investment}'
+                )
+                return redirect('accounts:invest_in_fund', pk=fund.pk)
+
             investment.save()
-            fund.invested_amount += investment.amount
-            fund.save()
-            messages.success(request, f'Successfully invested ${investment.amount} in {fund.name}!')
-            return redirect('accounts:active_investments')
+
+            messages.success(
+                request,
+                f'Investment created. Proceed to payment.'
+            )
+
+            return redirect('accounts:ssl_payment', pk=investment.pk)
+
+        else:
+            print(form.errors)  # DEBUG
+
     else:
         form = InvestmentForm()
-        form.fields['fund'].queryset = Fund.objects.filter(pk=pk)
-    return render(request, 'accounts/invest_in_fund.html', {'form': form, 'fund': fund})
+
+    return render(request, 'accounts/invest_in_fund.html', {
+        'form': form,
+        'fund': fund
+    })
 
 @login_required
 def active_investments(request):
@@ -433,8 +478,36 @@ def payment(request):
 def admin_investors(request):
     if request.user.role != 'admin':
         return HttpResponseForbidden('Access denied')
+
     investors = CustomUser.objects.filter(role='investor')
-    return render(request, 'accounts/admin_investors.html', {'investors': investors})
+
+    investor_data = []
+
+    for investor in investors:
+        total_invested = Investment.objects.filter(
+            investor=investor
+        ).aggregate(total=models.Sum('amount'))['total'] or 0
+
+        total_payments = Payment.objects.filter(
+            investor=investor,
+            status='completed'
+        ).aggregate(total=models.Sum('amount'))['total'] or 0
+
+        total_funds = Investment.objects.filter(
+            investor=investor
+        ).count()
+
+        investor_data.append({
+            'user': investor,
+            'total_invested': total_invested,
+            'total_payments': total_payments,
+            'total_funds': total_funds,
+        })
+
+    return render(request, 'accounts/admin_investors.html', {
+        'investor_data': investor_data
+    })
+
 
 @login_required
 def admin_funds(request):
@@ -618,3 +691,123 @@ def admin_fund_applications(request):
         return HttpResponseForbidden('Access denied')
     applications = Investment.objects.all()
     return render(request, 'accounts/admin_fund_applications.html', {'applications': applications})
+
+
+
+@login_required
+def investment_history(request):
+    investments = Investment.objects.filter(
+        investor=request.user
+    ).select_related('fund').order_by('-invested_date')
+
+    return render(request, 'accounts/investment_history.html', {
+        'investments': investments
+    })
+
+
+
+@csrf_exempt
+def payment_success(request):
+    if request.method == "POST":
+        tran_id = request.POST.get("tran_id")
+        val_id = request.POST.get("val_id")
+
+        if not tran_id:
+            return HttpResponse("Transaction ID missing")
+
+        transaction = get_object_or_404(Transaction, tran_id=tran_id)
+
+        #  VALIDATE WITH SSLCommerz
+        validation_url = f"https://sandbox.sslcommerz.com/validator/api/validationserverAPI.php?val_id={val_id}&store_id={settings.SSLCOMMERZ_STORE_ID}&store_passwd={settings.SSLCOMMERZ_STORE_PASSWORD}&format=json"
+
+        res = requests.get(validation_url)
+        result = res.json()
+
+        if result.get("status") == "VALID":
+            transaction.status = "success"
+            transaction.save()
+
+            investment = transaction.investment
+            investment.status = "active"
+            investment.transaction_id = tran_id
+            investment.save()
+
+            fund = investment.fund
+            fund.invested_amount += investment.amount
+            fund.save()
+
+            messages.success(request, "Payment successful!")
+        else:
+            transaction.status = "failed"
+            transaction.save()
+            messages.error(request, "Payment validation failed!")
+
+        return redirect("accounts:active_investments")
+
+    return HttpResponse("Invalid request")
+@csrf_exempt
+def payment_fail(request):
+    tran_id = request.POST.get("tran_id")
+    if tran_id:
+        Transaction.objects.filter(tran_id=tran_id).update(status="failed")
+    return redirect('accounts:fund_list')
+
+
+@csrf_exempt
+def payment_cancel(request):
+    tran_id = request.POST.get("tran_id")
+    if tran_id:
+        Transaction.objects.filter(tran_id=tran_id).update(status="cancelled")
+    return redirect('accounts:fund_list')
+
+
+import requests
+
+def ssl_payment(request, pk):
+    investment = get_object_or_404(Investment, pk=pk)
+
+    tran_id = f"INV{investment.id}{int(timezone.now().timestamp())}"
+
+    transaction = Transaction.objects.create(
+        investment=investment,
+        tran_id=tran_id,
+        amount=investment.amount,
+        status='initiated'
+    )
+
+    store_id = settings.SSLCOMMERZ_STORE_ID
+    store_pass = settings.SSLCOMMERZ_STORE_PASSWORD
+
+    payload = {
+        'store_id': store_id,
+        'store_passwd': store_pass,
+        'total_amount': float(investment.amount),
+        'currency': "BDT",
+        'tran_id': tran_id,
+
+        'success_url': request.build_absolute_uri('/accounts/payment/success/'),
+        'fail_url': request.build_absolute_uri('/accounts/payment/fail/'),
+        'cancel_url': request.build_absolute_uri('/accounts/payment/cancel/'),
+
+        'cus_name': request.user.username,
+        'cus_email': request.user.email,
+        'cus_add1': "Dhaka",
+        'cus_phone': "01700000000",
+        'shipping_method': "NO",
+        'product_name': investment.fund.name,
+        'product_category': "Investment",
+        'product_profile': "general",
+    }
+
+    response = requests.post(
+        "https://sandbox.sslcommerz.com/gwprocess/v4/api.php",
+        data=payload
+    )
+
+    data = response.json()
+
+    if data.get("status") == "SUCCESS":
+        return redirect(data["GatewayPageURL"])
+    else:
+        messages.error(request, "Payment gateway error")
+        return redirect("accounts:fund_list")

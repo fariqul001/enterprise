@@ -84,14 +84,64 @@ class Fund(models.Model):
         return self.name
 
 class Investment(models.Model):
-    investor = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='investments')
-    fund = models.ForeignKey(Fund, on_delete=models.CASCADE, related_name='investments')
+    STATUS_PENDING = 'pending'
+    STATUS_ACTIVE = 'active'
+    STATUS_FAILED = 'failed'
+
+    STATUS_CHOICES = [
+        (STATUS_PENDING, 'Pending'),
+        (STATUS_ACTIVE, 'Active'),
+        (STATUS_FAILED, 'Failed'),
+    ]
+
+    investor = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name='investments'
+    )
+
+    fund = models.ForeignKey(
+        Fund,
+        on_delete=models.CASCADE,
+        related_name='investments'
+    )
+
     amount = models.DecimalField(max_digits=15, decimal_places=2)
+
     invested_date = models.DateTimeField(auto_now_add=True)
-    status = models.CharField(max_length=50, default='active')
+
+    # PAYMENT STATUS (IMPORTANT FOR REAL SYSTEM)
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default=STATUS_PENDING
+    )
+
+    #  TRANSACTION TRACKING (VERY IMPORTANT)
+    transaction_id = models.CharField(
+        max_length=100,
+        unique=True,
+        null=True,
+        blank=True
+    )
+
+    payment_method = models.CharField(
+        max_length=50,
+        null=True,
+        blank=True
+    )  # e.g. sslcommerz, bkash, nagad
+
+    paid_at = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.investor.username} invested in {self.fund.name}"
+        return f"{self.investor.username} - {self.fund.name} (${self.amount}) [{self.status}]"
 
 class Installment(models.Model):
     investment = models.ForeignKey(Investment, on_delete=models.CASCADE, related_name='installments')
@@ -112,3 +162,12 @@ class Payment(models.Model):
 
     def __str__(self):
         return f"Payment by {self.investor.username} - {self.status}"
+    
+
+
+class Transaction(models.Model):
+    investment = models.ForeignKey(Investment, on_delete=models.CASCADE)
+    tran_id = models.CharField(max_length=100, unique=True)
+    amount = models.DecimalField(max_digits=15, decimal_places=2)
+    status = models.CharField(max_length=20, default='initiated')
+    created_at = models.DateTimeField(auto_now_add=True)

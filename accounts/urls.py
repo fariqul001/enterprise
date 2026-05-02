@@ -30,4 +30,10 @@ urlpatterns = [
     path('admin/reports/', views.admin_reports, name='admin_reports'),
     path('admin/reports/download/', views.admin_reports_download, name='admin_reports_download'),
     path('send-reminder/', views.send_monthly_reminder, name='send_reminder'),
+    path('investment-history/', views.investment_history, name='investment_history'),
+    path('ssl-pay/<int:pk>/', views.ssl_payment, name='ssl_payment'),
+    path('payment/success/', views.payment_success, name='payment_success'),
+    path('payment/fail/', views.payment_fail, name='payment_fail'),
+    path('payment/cancel/', views.payment_cancel, name='payment_cancel'),
+
 ]

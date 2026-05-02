@@ -70,9 +70,9 @@ class FundForm(forms.ModelForm):
 class InvestmentForm(forms.ModelForm):
     class Meta:
         model = Investment
-        fields = ('fund', 'amount')
+        fields = ('amount',)
         widgets = {
-            'fund': forms.Select(attrs={'class': 'form-control'}),
+            
             'amount': forms.NumberInput(attrs={'class': 'form-control'}),
         }
 

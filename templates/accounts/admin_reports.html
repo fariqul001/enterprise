@@ -10,7 +10,7 @@
             <p class="text-muted">Download company performance reports for the board, review fund capacity and investor growth.</p>
         </div>
         <div class="text-end">
-            <a href="{% url 'accounts:admin_reports_download' %}?period={{ selected_period }}&type=csv" class="btn btn-outline-primary me-2">Download CSV</a>
+           <!-- <a href="{% url 'accounts:admin_reports_download' %}?period={{ selected_period }}&type=csv" class="btn btn-outline-primary me-2">Download CSV</a>-->
             <a href="{% url 'accounts:admin_reports_download' %}?period={{ selected_period }}&type=pdf" class="btn btn-primary">Download PDF</a>
         </div>
     </div>
@@ -41,7 +41,7 @@
             <div class="card report-card shadow-sm">
                 <div class="card-body text-center">
                     <h6>Total Invested</h6>
-                    <h3>${{ total_invested|floatformat:2 }}</h3>
+                    <h3>{{ total_invested|floatformat:2 }}</h3>
                     <p class="text-muted">Across all funds</p>
                 </div>
             </div>
@@ -50,7 +50,7 @@
             <div class="card report-card shadow-sm">
                 <div class="card-body text-center">
                     <h6>Remaining Capacity</h6>
-                    <h3>${{ total_remaining|floatformat:2 }}</h3>
+                    <h3>{{ total_remaining|floatformat:2 }}</h3>
                     <p class="text-muted">To complete all fund goals</p>
                 </div>
             </div>
@@ -172,15 +172,15 @@
                     <ul class="list-group list-group-flush">
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             <span>Total Investment Amount</span>
-                            <strong>${{ total_invested|floatformat:2 }}</strong>
+                            <strong>{{ total_invested|floatformat:2 }}</strong>
                         </li>
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             <span>Total Capacity Goal</span>
-                            <strong>${{ total_capacity|floatformat:2 }}</strong>
+                            <strong>{{ total_capacity|floatformat:2 }}</strong>
                         </li>
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             <span>Total Remaining Capacity</span>
-                            <strong>${{ total_remaining|floatformat:2 }}</strong>
+                            <strong>{{ total_remaining|floatformat:2 }}</strong>
                         </li>
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             <span>Active Funds</span>

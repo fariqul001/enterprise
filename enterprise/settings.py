@@ -120,3 +120,10 @@ EMAIL_USE_SSL = False
 
 EMAIL_HOST_USER = 'fariqulislam78@gmail.com'
 EMAIL_HOST_PASSWORD = 'iebj rrsk ecgd qajp'
+
+
+
+SSLCOMMERZ_STORE_ID = "fahim69f64742cd868"
+SSLCOMMERZ_STORE_PASSWORD = "fahim69f64742cd868@ssl"
+
+SSLCOMMERZ_SANDBOX = True
