@@ -29,5 +29,5 @@ urlpatterns = [
     path('admin/fund-applications/', views.admin_fund_applications, name='admin_fund_applications'),
     path('admin/reports/', views.admin_reports, name='admin_reports'),
     path('admin/reports/download/', views.admin_reports_download, name='admin_reports_download'),
+    path('send-reminder/', views.send_monthly_reminder, name='send_reminder'),
 ]
-print("ACCOUNTS URLS LOADED")

@@ -16,6 +16,9 @@ import json
 from .forms import CustomUserCreationForm, InvestorKYCForm, ProfileForm, FundForm, InvestmentForm, PaymentForm
 from .models import CustomUser, InvestorKYC, InvestorAgreement, Fund, Investment, Installment, Payment
 from fpdf import FPDF
+from django.core.mail import EmailMessage
+
+
 
 def home(request):
     return render(request, 'accounts/home.html')
@@ -167,9 +170,15 @@ def kyc_review_detail(request, pk):
         return HttpResponseForbidden('Access denied')
 
     kyc = get_object_or_404(InvestorKYC, pk=pk)
+
     if request.method == 'POST':
         action = request.POST.get('action')
         admin_note = request.POST.get('admin_note', '').strip()
+
+        user_email = kyc.user.email
+        user_name = kyc.user.username
+
+        # ================= APPROVE =================
         if action == 'approve':
             kyc.status = InvestorKYC.STATUS_APPROVED
             kyc.admin_note = admin_note or 'Approved by admin.'
@@ -177,24 +186,134 @@ def kyc_review_detail(request, pk):
             kyc.user.save()
             kyc.reviewed_at = timezone.now()
             kyc.save()
+
             create_agreement_pdf(kyc)
-            messages.success(request, 'KYC approved and investor agreement generated.')
+
+            #  Email
+            subject = "KYC Application Approved - Welcome Investor"
+            message = f"""
+Dear {user_name},
+
+We are pleased to inform you that your KYC (Know Your Customer) application has been successfully approved.
+
+You are now officially registered as an investor in our platform and can start participating in investment opportunities.
+
+If you have any questions or need assistance, feel free to contact our support team.
+
+Best regards,  
+Enterprise Fund & Investment Management Team
+            """
+
+            email = EmailMessage(subject, message, settings.EMAIL_HOST_USER, [user_email])
+            email.send()
+
+            messages.success(request, 'KYC approved and email sent.')
             return redirect('accounts:admin_dashboard')
+
+        # ================= REJECT =================
         if action == 'reject':
             kyc.status = InvestorKYC.STATUS_REJECTED
             kyc.admin_note = admin_note or 'KYC rejected. Please review the documents.'
             kyc.reviewed_at = timezone.now()
             kyc.save()
-            messages.success(request, 'KYC application rejected.')
+
+            #  Email
+            subject = "KYC Application Status Update"
+            message = f"""
+Dear {user_name},
+
+Thank you for submitting your KYC application.
+
+After careful review, we regret to inform you that your application has not been approved at this time.
+
+Reason:
+{kyc.admin_note}
+
+You are welcome to review your documents and submit a new application.
+
+Best regards,  
+Enterprise Fund & Investment Management Team
+            """
+
+            email = EmailMessage(subject, message, settings.EMAIL_HOST_USER, [user_email])
+            email.send()
+
+            messages.success(request, 'KYC rejected and email sent.')
             return redirect('accounts:admin_dashboard')
+
+        # ================= REQUEST DOCUMENTS =================
         if action == 'request_docs':
             kyc.status = InvestorKYC.STATUS_ADDITIONAL
             kyc.admin_note = admin_note or 'Additional documents required.'
             kyc.reviewed_at = timezone.now()
             kyc.save()
-            messages.success(request, 'Requested additional documents from the investor.')
+
+            #  Email
+            subject = "Additional Documents Required for KYC"
+            message = f"""
+Dear {user_name},
+
+Your KYC application has been reviewed.
+
+However, additional documents are required to proceed further.
+
+Details:
+{kyc.admin_note}
+
+Please log in to your account and upload the requested documents.
+
+Best regards,  
+Enterprise Fund & Investment Management Team
+            """
+
+            email = EmailMessage(subject, message, settings.EMAIL_HOST_USER, [user_email])
+            email.send()
+
+            messages.success(request, 'Requested documents and email sent.')
             return redirect('accounts:admin_dashboard')
+
     return render(request, 'accounts/kyc_review_detail.html', {'kyc': kyc})
+
+
+
+
+
+
+@login_required
+def send_monthly_reminder(request):
+    if request.user.role != 'admin':
+        return HttpResponseForbidden('Access denied')
+
+    investors = InvestorKYC.objects.filter(status=InvestorKYC.STATUS_APPROVED)
+
+    for kyc in investors:
+        user_email = kyc.user.email
+        user_name = kyc.user.username
+
+        subject = "Monthly Investment Payment Reminder"
+
+        message = f"""
+Dear {user_name},
+
+This is a friendly reminder to complete your monthly investment payment.
+
+Please ensure that your payment is submitted before the 25th of this month to remain compliant with your investment plan.
+
+Timely payments help us maintain smooth operations and maximize investment opportunities for all members.
+
+Thank you for your continued trust and cooperation.
+
+Best regards,  
+Enterprise Fund & Investment Management Team
+        """
+
+        email = EmailMessage(subject, message, settings.EMAIL_HOST_USER, [user_email])
+        email.send()
+
+    messages.success(request, "Monthly reminder emails sent to all investors.")
+    return redirect('accounts:admin_dashboard')
+
+
 
 @login_required
 def agreement_list(request):

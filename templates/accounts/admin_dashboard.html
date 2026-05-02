@@ -78,13 +78,13 @@
                     {% if kyc_requests %}
                         <a href="{% url 'accounts:kyc_review_detail' kyc_requests.0.pk %}" class="list-group-item list-group-item-action">
                             <i class="fas fa-user-check me-2"></i>Review First KYC</a>
-                        <a href="{% url 'accounts:kyc_review_detail' kyc_requests.0.pk %}" class="list-group-item list-group-item-action">
-                            <i class="fas fa-file-contract me-2"></i>Generate Agreements</a>
+                       <!-- <a href="{% url 'accounts:kyc_review_detail' kyc_requests.0.pk %}" class="list-group-item list-group-item-action">
+                            <i class="fas fa-file-contract me-2"></i>Generate Agreements</a> -->
                     {% else %}
                         <a href="#" class="list-group-item list-group-item-action disabled">
                             <i class="fas fa-user-check me-2"></i>No Pending KYC</a>
-                        <a href="#" class="list-group-item list-group-item-action disabled">
-                            <i class="fas fa-file-contract me-2"></i>No Agreements Ready</a>
+                       <!-- <a href="#" class="list-group-item list-group-item-action disabled">
+                            <i class="fas fa-file-contract me-2"></i>No Agreements Ready</a>-->
                     {% endif %}
                     <a href="{% url 'accounts:admin_investors' %}" class="list-group-item list-group-item-action">
                         <i class="fas fa-users me-2"></i>Investor List</a>
@@ -95,7 +95,10 @@
                     <a href="{% url 'accounts:admin_fund_applications' %}" class="list-group-item list-group-item-action">
                         <i class="fas fa-file-invoice-dollar me-2"></i>Fund Applications</a>
                     <a href="{% url 'accounts:admin_reports' %}" class="list-group-item list-group-item-action">
-                        <i class="fas fa-chart-bar me-2"></i>Reports & Analytics</a>
+                        <i class="fas fa-chart-bar me-2"></i>Reports & Analytics</a>   
+                    <a href="{% url 'accounts:send_reminder' %}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-envelope me-2"></i>Send Monthly Reminder</a>
+                
                 </div>
                 
                         
