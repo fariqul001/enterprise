@@ -62,6 +62,14 @@ class InvestorAgreement(models.Model):
         return f"Agreement for {self.kyc.user.username}"
 
 class Fund(models.Model):
+    STATUS_ACTIVE = 'active'
+    STATUS_INACTIVE = 'inactive'
+
+    STATUS_CHOICES = [
+        (STATUS_ACTIVE, 'Active'),
+        (STATUS_INACTIVE, 'Inactive'),
+    ]
+
     name = models.CharField(max_length=255)
     description = models.TextField()
     minimum_investment = models.DecimalField(max_digits=10, decimal_places=2)
@@ -69,6 +77,7 @@ class Fund(models.Model):
     duration = models.CharField(max_length=100)
     total_capacity = models.DecimalField(max_digits=15, decimal_places=2)
     invested_amount = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default=STATUS_ACTIVE)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

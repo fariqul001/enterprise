@@ -23,6 +23,11 @@ urlpatterns = [
     path('admin/', views.admin_dashboard, name='admin_dashboard_alias'),
     path('admin/investors/', views.admin_investors, name='admin_investors'),
     path('admin/funds/', views.admin_funds, name='admin_funds'),
+    path('admin/funds/<int:pk>/toggle/', views.admin_toggle_fund, name='admin_toggle_fund'),
+    path('admin/funds/<int:pk>/delete/', views.admin_delete_fund, name='admin_delete_fund'),
     path('admin/add-fund/', views.admin_add_fund, name='admin_add_fund'),
     path('admin/fund-applications/', views.admin_fund_applications, name='admin_fund_applications'),
+    path('admin/reports/', views.admin_reports, name='admin_reports'),
+    path('admin/reports/download/', views.admin_reports_download, name='admin_reports_download'),
 ]
+print("ACCOUNTS URLS LOADED")

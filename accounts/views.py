@@ -1,12 +1,17 @@
 import os
+from io import BytesIO
+import csv
+import calendar
+from datetime import datetime, timedelta
 from pathlib import Path
 from django.conf import settings
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponseForbidden, FileResponse
+from django.http import HttpResponseForbidden, FileResponse, HttpResponse
 from django.contrib import messages
 from django.db import models
+from django.utils import timezone
 import json
 from .forms import CustomUserCreationForm, InvestorKYCForm, ProfileForm, FundForm, InvestmentForm, PaymentForm
 from .models import CustomUser, InvestorKYC, InvestorAgreement, Fund, Investment, Installment, Payment
@@ -120,6 +125,8 @@ def admin_dashboard(request):
 
     # Dynamic data
     total_funds = Fund.objects.count()
+    active_funds = Fund.objects.filter(status=Fund.STATUS_ACTIVE).count()
+    inactive_funds = Fund.objects.filter(status=Fund.STATUS_INACTIVE).count()
     total_investors = CustomUser.objects.filter(role='investor').count()
     total_money_raised = Investment.objects.aggregate(total=models.Sum('amount'))['total'] or 0
 
@@ -127,28 +134,28 @@ def admin_dashboard(request):
     funds = Fund.objects.all()
     fund_labels = [fund.name for fund in funds]
     fund_data = [float(fund.invested_amount) for fund in funds]
+    total_capacity = Fund.objects.aggregate(total=models.Sum('total_capacity'))['total'] or 0
+    total_remaining = sum(max(float(fund.total_capacity - fund.invested_amount), 0) for fund in funds)
 
     context = {
         'active_users': InvestorKYC.objects.count(),
         'pending_kyc': pending_kyc.count(),
         'open_funds': total_funds,
+        'active_funds': active_funds,
+        'inactive_funds': inactive_funds,
         'pending_payments': Payment.objects.filter(status='pending').count(),
         'pending_investors': total_investors,
         'total_money_raised': total_money_raised,
+        'total_capacity': total_capacity,
+        'total_remaining': total_remaining,
         'kyc_requests': pending_kyc.select_related('user'),
         'recent_activities': [
             {'title': 'Platform audit completed', 'time': '1 hour ago'},
             {'title': 'New investor application received', 'time': '2 hours ago'},
             {'title': 'Agreement archive updated', 'time': '6 hours ago'},
         ],
-        'fund_requests': [
-            {'fund': 'Emerging Markets', 'status': 'Open', 'capacity': '250K'},
-            {'fund': 'Capital Preservation', 'status': 'Closed', 'capacity': '500K'},
-        ],
-        'payment_requests': [
-            {'investor': 'alex', 'amount': '$12,000', 'status': 'Awaiting Approval'},
-            {'investor': 'nina', 'amount': '$5,600', 'status': 'Verified'},
-        ],
+        'fund_requests': funds.order_by('-created_at')[:4],
+        'payment_requests': Payment.objects.select_related('investor').order_by('-payment_date')[:4],
         'fund_labels_json': json.dumps(fund_labels),
         'fund_data_json': json.dumps(fund_data),
     }
@@ -314,8 +321,163 @@ def admin_investors(request):
 def admin_funds(request):
     if request.user.role != 'admin':
         return HttpResponseForbidden('Access denied')
-    funds = Fund.objects.all()
+    funds = Fund.objects.all().order_by('-created_at')
     return render(request, 'accounts/admin_funds.html', {'funds': funds})
+
+@login_required
+def admin_toggle_fund(request, pk):
+    if request.user.role != 'admin':
+        return HttpResponseForbidden('Access denied')
+    fund = get_object_or_404(Fund, pk=pk)
+    if request.method == 'POST':
+        fund.status = Fund.STATUS_INACTIVE if fund.status == Fund.STATUS_ACTIVE else Fund.STATUS_ACTIVE
+        fund.save()
+        messages.success(request, f'Fund "{fund.name}" status updated to {fund.status}.')
+    return redirect('accounts:admin_funds')
+
+@login_required
+def admin_delete_fund(request, pk):
+    if request.user.role != 'admin':
+        return HttpResponseForbidden('Access denied')
+    fund = get_object_or_404(Fund, pk=pk)
+    if request.method == 'POST':
+        fund.delete()
+        messages.success(request, f'Fund "{fund.name}" was deleted successfully.')
+    return redirect('accounts:admin_funds')
+
+def build_admin_report_context(period='this_month'):
+    now = timezone.now()
+    selected_period_label = 'This Month'
+    members = CustomUser.objects.filter(role='investor')
+
+    if period == 'previous_month':
+        first_of_this_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        end = first_of_this_month - timedelta(seconds=1)
+        start = end.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        selected_period_label = 'Previous Month'
+    elif period == 'this_year':
+        start = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+        end = now
+        selected_period_label = 'This Year'
+    elif period == 'all':
+        start = None
+        end = None
+        selected_period_label = 'All Time'
+    else:
+        start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        end = now
+
+    if start is not None:
+        members = members.filter(date_joined__gte=start, date_joined__lte=end)
+
+    funds = Fund.objects.all().order_by('-created_at')
+    fund_summary = []
+    for fund in funds:
+        remaining = max(float(fund.total_capacity - fund.invested_amount), 0)
+        fund_summary.append({
+            'name': fund.name,
+            'invested': float(fund.invested_amount),
+            'remaining': remaining,
+            'status': fund.status,
+            'badge_color': 'success' if fund.status == Fund.STATUS_ACTIVE else 'secondary',
+        })
+
+    month_labels = []
+    month_counts = []
+    for offset in range(5, -1, -1):
+        year = now.year
+        month = now.month - offset
+        while month <= 0:
+            month += 12
+            year -= 1
+        start_month = datetime(year, month, 1, tzinfo=timezone.get_current_timezone())
+        if month == 12:
+            next_month = datetime(year + 1, 1, 1, tzinfo=timezone.get_current_timezone())
+        else:
+            next_month = datetime(year, month + 1, 1, tzinfo=timezone.get_current_timezone())
+        count = CustomUser.objects.filter(role='investor', date_joined__gte=start_month, date_joined__lt=next_month).count()
+        month_labels.append(start_month.strftime('%b %Y'))
+        month_counts.append(count)
+
+    return {
+        'selected_period': period,
+        'selected_period_label': selected_period_label,
+        'fund_summary': fund_summary,
+        'total_invested': sum(float(fund.invested_amount) for fund in funds),
+        'total_capacity': sum(float(fund.total_capacity) for fund in funds),
+        'total_remaining': sum(item['remaining'] for item in fund_summary),
+        'active_funds': Fund.objects.filter(status=Fund.STATUS_ACTIVE).count(),
+        'total_funds': funds.count(),
+        'total_investors': CustomUser.objects.filter(role='investor').count(),
+        'members_count': members.count(),
+        'joined_members': members.order_by('-date_joined')[:12],
+        'month_labels_json': json.dumps(month_labels),
+        'month_counts_json': json.dumps(month_counts),
+    }
+
+@login_required
+def admin_reports(request):
+    if request.user.role != 'admin':
+        return HttpResponseForbidden('Access denied')
+    context = build_admin_report_context(request.GET.get('period', 'this_month'))
+    return render(request, 'accounts/admin_reports.html', context)
+
+@login_required
+def admin_reports_download(request):
+    if request.user.role != 'admin':
+        return HttpResponseForbidden('Access denied')
+
+    download_type = request.GET.get('type', 'csv')
+    period = request.GET.get('period', 'this_month')
+    report_data = build_admin_report_context(period)
+
+    if download_type == 'pdf':
+        buffer = BytesIO()
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_font('Arial', 'B', 16)
+        pdf.cell(0, 10, 'Admin Reports & Analytics', ln=True)
+        pdf.set_font('Arial', '', 12)
+        pdf.cell(0, 8, f'Period: {report_data.get("selected_period_label")}', ln=True)
+        pdf.ln(4)
+        pdf.cell(0, 8, f'Total Invested: ${report_data.get("total_invested"):.2f}', ln=True)
+        pdf.cell(0, 8, f'Total Capacity: ${report_data.get("total_capacity"):.2f}', ln=True)
+        pdf.cell(0, 8, f'Total Remaining: ${report_data.get("total_remaining"):.2f}', ln=True)
+        pdf.cell(0, 8, f'Active Funds: {report_data.get("active_funds")}', ln=True)
+        pdf.cell(0, 8, f'Total Investors: {report_data.get("total_investors")}', ln=True)
+        pdf.ln(6)
+        pdf.set_font('Arial', 'B', 14)
+        pdf.cell(0, 8, 'Fund Summary', ln=True)
+        pdf.set_font('Arial', '', 11)
+        for fund in report_data.get('fund_summary', []):
+            pdf.multi_cell(0, 7, f"{fund['name']}: Invested ${fund['invested']:.2f}, Remaining ${fund['remaining']:.2f}, Status {fund['status']}")
+        buffer.write(pdf.output(dest='S').encode('latin-1'))
+        buffer.seek(0)
+        response = HttpResponse(buffer, content_type='application/pdf')
+        response['Content-Disposition'] = 'attachment; filename="admin_report.pdf"'
+        return response
+
+    csv_buffer = BytesIO()
+    writer = csv.writer(csv_buffer)
+    writer.writerow(['Report Type', report_data.get('selected_period_label')])
+    writer.writerow([])
+    writer.writerow(['Total Invested', f'${report_data.get("total_invested"):.2f}'])
+    writer.writerow(['Total Capacity', f'${report_data.get("total_capacity"):.2f}'])
+    writer.writerow(['Total Remaining', f'${report_data.get("total_remaining"):.2f}'])
+    writer.writerow(['Active Funds', report_data.get('active_funds')])
+    writer.writerow(['Total Investors', report_data.get('total_investors')])
+    writer.writerow([])
+    writer.writerow(['Fund Name', 'Invested', 'Remaining', 'Status'])
+    for fund in report_data.get('fund_summary', []):
+        writer.writerow([fund['name'], f"${fund['invested']:.2f}", f"${fund['remaining']:.2f}", fund['status']])
+    writer.writerow([])
+    writer.writerow(['Investor Username', 'Email', 'Joined'])
+    for member in report_data.get('joined_members', []):
+        writer.writerow([member.username, member.email, member.date_joined.strftime('%Y-%m-%d')])
+
+    response = HttpResponse(csv_buffer.getvalue(), content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="admin_report.csv"'
+    return response
 
 @login_required
 def admin_add_fund(request):

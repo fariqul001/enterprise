@@ -1,3 +1,6 @@
+<!-- THIS IS TEST VERSION 123 -->
+
+
 {% extends 'base.html' %}
 
 {% block title %}Admin Dashboard{% endblock %}
@@ -16,18 +19,27 @@
         </div>
     </div>
 </div>
-
 <div class="container admin-panel">
     <div class="row admin-stats g-4 mb-4">
+ 
+
+
+    
+        
+        
+
+
         <div class="col-md-3">
             <div class="card">
                 <div class="card-body text-center">
-                    <h5>Total KYC Applications</h5>
+                    <h5>Totalll KYC Applications</h5>
                     <h2>{{ active_users }}</h2>
                     <p class="mb-0">Applications submitted</p>
                 </div>
             </div>
-        </div>
+        </div>   
+       <!-- 
+        -->
         <div class="col-md-3">
             <div class="card">
                 <div class="card-body text-center">
@@ -55,41 +67,7 @@
                 </div>
             </div>
         </div>
-    </div>
-
-    <div class="row g-4 mb-4">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">
-                    <h5>Funds Overview</h5>
-                </div>
-                <div class="card-body">
-                    <canvas id="fundChart"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">
-                    <h5>Key Metrics</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row text-center">
-                        <div class="col-6">
-                            <h4>${{ total_money_raised|floatformat:2 }}</h4>
-                            <p>Total Money Raised</p>
-                        </div>
-                        <div class="col-6">
-                            <h4>{{ open_funds }}</h4>
-                            <p>Total Funds</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row g-4">
+    
         <div class="col-lg-3">
             <div class="sidebar admin-sidebar">
                 <h5 class="mb-3">Admin Actions</h5>
@@ -110,17 +88,79 @@
                     {% endif %}
                     <a href="{% url 'accounts:admin_investors' %}" class="list-group-item list-group-item-action">
                         <i class="fas fa-users me-2"></i>Investor List</a>
-                    <a href="{% url 'accounts:admin_funds' %}" class="list-group-item list-group-item-action">
+                        <a href="{% url 'accounts:admin_funds' %}" class="list-group-item list-group-item-action">
                         <i class="fas fa-dollar-sign me-2"></i>Manage Funds</a>
                     <a href="{% url 'accounts:admin_add_fund' %}" class="list-group-item list-group-item-action">
                         <i class="fas fa-plus-circle me-2"></i>Add New Fund</a>
                     <a href="{% url 'accounts:admin_fund_applications' %}" class="list-group-item list-group-item-action">
                         <i class="fas fa-file-invoice-dollar me-2"></i>Fund Applications</a>
-                    <a href="#" class="list-group-item list-group-item-action">
+                    <a href="{% url 'accounts:admin_reports' %}" class="list-group-item list-group-item-action">
                         <i class="fas fa-chart-bar me-2"></i>Reports & Analytics</a>
+                </div>
+                
+                        
+            </div>
+
+               
+    
+
+        </div>
+        
+       
+         <div class="col-md-6 ">
+            <div class="card ">
+                <div class="card-header">
+                    <h5>Funds Overview</h5>
+                </div>
+                <div class="card-body fund-card">
+                    <canvas id="fundChart"></canvas>
                 </div>
             </div>
         </div>
+
+
+    </div>
+
+     
+    <div class="row g-4 mb-4">
+        
+          <!-- <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Funds Overview</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="fundChart"></canvas>
+                </div>
+            </div>
+        </div> -->
+
+         <!-- 
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Key Metrics</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <h4>${{ total_money_raised|floatformat:2 }}</h4>
+                            <p>Total Money Raised</p>
+                        </div>
+                        <div class="col-6">
+                            <h4>{{ open_funds }}</h4>
+                            <p>Total Funds</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        -->
+    </div>
+  <!-- 
+    <div class="row g-4">
+       
 
         <div class="col-lg-9">
             <div class="card">
@@ -215,9 +255,9 @@
                                     <tbody>
                                         {% for fund in fund_requests %}
                                             <tr>
-                                                <td>{{ fund.fund }}</td>
+                                                <td>{{ fund.name }}</td>
                                                 <td><span class="tag-status tag-approved">{{ fund.status }}</span></td>
-                                                <td>{{ fund.capacity }}</td>
+                                                <td>${{ fund.total_capacity|floatformat:2 }}</td>
                                             </tr>
                                         {% endfor %}
                                     </tbody>
@@ -254,6 +294,8 @@
             </div>
         </div>
     </div>
+
+    -->
 </div>
 
 <script>

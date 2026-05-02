@@ -207,7 +207,7 @@ canvas {
 }
 
 .admin-panel .card {
-    border-radius: 16px;
+    border-radius: 16px; 
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
 }
 
@@ -240,4 +240,19 @@ canvas {
 
 .admin-activity .list-group-item:hover {
     transform: translateX(6px);
+}
+
+
+.fund-card {
+    background-color: white !important;
+}
+
+.card-header {
+    background-color: white !important;
+    color: black !important;
+}
+
+.card {
+    border-radius: 18px !important;
+    overflow: hidden;
 }
