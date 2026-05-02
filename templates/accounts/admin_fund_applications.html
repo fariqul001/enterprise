@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% block title %}Fund Applications{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="fas fa-file-invoice-dollar me-2"></i>Fund Applications</h2>
+            <p class="text-muted">Review investment applications submitted by investors.</p>
+        </div>
+        <a href="{% url 'accounts:admin_dashboard' %}" class="btn btn-outline-secondary">Back to Dashboard</a>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Investor</th>
+                    <th>Fund</th>
+                    <th>Amount</th>
+                    <th>Date</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for application in applications %}
+                    <tr>
+                        <td>{{ application.investor.username }}</td>
+                        <td>{{ application.fund.name }}</td>
+                        <td>${{ application.amount }}</td>
+                        <td>{{ application.invested_date|date:'M d, Y' }}</td>
+                        <td><span class="badge bg-success">{{ application.status|capfirst }}</span></td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center">No fund applications have been submitted yet.</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

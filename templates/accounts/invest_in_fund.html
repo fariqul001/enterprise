@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block title %}Invest in {{ fund.name }}{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Invest in {{ fund.name }}</h4>
+                </div>
+                <div class="card-body">
+                    <p><strong>Fund:</strong> {{ fund.name }}</p>
+                    <p><strong>Minimum Investment:</strong> ${{ fund.minimum_investment }}</p>
+                    <p><strong>Expected Return:</strong> {{ fund.expected_return }}</p>
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="amount" class="form-label">Investment Amount ($)</label>
+                            {{ form.amount }}
+                        </div>
+                        {{ form.fund }}
+                        <button type="submit" class="btn btn-primary w-100">Invest Now</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

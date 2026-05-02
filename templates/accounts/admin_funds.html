@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+
+{% block title %}Manage Funds{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="fas fa-landmark me-2"></i>Fund Inventory</h2>
+            <p class="text-muted">Review active funds and investment capacity.</p>
+        </div>
+        <div>
+            <a href="{% url 'accounts:admin_add_fund' %}" class="btn btn-primary">Add New Fund</a>
+            <a href="{% url 'accounts:admin_dashboard' %}" class="btn btn-outline-secondary ms-2">Dashboard</a>
+        </div>
+    </div>
+
+    <div class="row">
+        {% for fund in funds %}
+            <div class="col-md-6 mb-4">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ fund.name }}</h5>
+                        <p class="card-text">{{ fund.description }}</p>
+                        <p><strong>Minimum Investment:</strong> ${{ fund.minimum_investment }}</p>
+                        <p><strong>Expected Return:</strong> {{ fund.expected_return }}</p>
+                        <p><strong>Duration:</strong> {{ fund.duration }}</p>
+                        <p><strong>Total Capacity:</strong> ${{ fund.total_capacity }}</p>
+                        <p><strong>Invested Amount:</strong> ${{ fund.invested_amount }}</p>
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <div class="col-md-12">
+                <div class="alert alert-info">No funds have been created yet.</div>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
