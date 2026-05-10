@@ -56,7 +56,15 @@ class InvestorKYCForm(forms.ModelForm):
 class FundForm(forms.ModelForm):
     class Meta:
         model = Fund
-        fields = ('name', 'description', 'minimum_investment', 'expected_return', 'duration', 'total_capacity', 'status')
+        fields = [
+            'name',
+            'description',
+            'minimum_investment',
+            'expected_return',
+            'duration',
+            'total_capacity',
+            'status'
+        ]
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),

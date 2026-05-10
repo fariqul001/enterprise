@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+
+{% block title %}Submit Monthly Payment{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div style="background: white; padding: 40px; border-radius: 15px; box-shadow: 0 10px 40px rgba(0,0,0,0.1);">
+                
+                <h2 style="color: #1e3a8a; font-weight: 800; font-size: 1.8rem; margin-bottom: 10px;">
+                    <i class="fas fa-credit-card me-2"></i> Monthly Payment Submission
+                </h2>
+                <p style="color: #6b7280; margin-bottom: 30px;">Submit your bank slip and payment amount</p>
+
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                <!-- Fund Info -->
+                <div style="background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); padding: 25px; border-radius: 12px; margin-bottom: 30px;">
+                    <h5 style="color: #0c4a6e; margin-bottom: 15px; font-weight: 700;">Fund Information</h5>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                        <div>
+                            <p style="font-size: 0.9rem; color: #0c4a6e; margin-bottom: 5px;">Fund Name</p>
+                            <p style="font-size: 1.1rem; font-weight: 600; color: #1e3a8a; margin: 0;">{{ investment.fund.name }}</p>
+                        </div>
+                        <div>
+                            <p style="font-size: 0.9rem; color: #0c4a6e; margin-bottom: 5px;">Initial Investment</p>
+                            <p style="font-size: 1.1rem; font-weight: 600; color: #1e3a8a; margin: 0;">${{ investment.amount|floatformat:2 }}</p>
+                        </div>
+                        <div>
+                            <p style="font-size: 0.9rem; color: #0c4a6e; margin-bottom: 5px;">Duration</p>
+                            <p style="font-size: 1.1rem; font-weight: 600; color: #1e3a8a; margin: 0;">{{ investment.fund.duration }}</p>
+                        </div>
+                        <div>
+                            <p style="font-size: 0.9rem; color: #0c4a6e; margin-bottom: 5px;">Expected Return</p>
+                            <p style="font-size: 1.1rem; font-weight: 600; color: #10b981; margin: 0;">{{ investment.fund.expected_return }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Payment Form -->
+                <form method="POST" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <!-- Amount Field -->
+                    <div style="margin-bottom: 25px;">
+                        <label for="amount" style="font-weight: 600; color: #1e3a8a; display: block; margin-bottom: 8px;">
+                            <i class="fas fa-dollar-sign me-1"></i> Payment Amount *
+                        </label>
+                        <input type="number" id="amount" name="amount" step="0.01" min="0" required 
+                               style="width: 100%; padding: 12px 15px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 1rem; transition: border-color 0.3s;"
+                               placeholder="Enter payment amount" onfocus="this.style.borderColor='#0284c7'" onblur="this.style.borderColor='#e5e7eb'">
+                        <small style="color: #6b7280; display: block; margin-top: 5px;">
+                            <i class="fas fa-info-circle me-1"></i> The amount must match the monthly installment
+                        </small>
+                    </div>
+
+                    <!-- Bank Slip Upload -->
+                    <div style="margin-bottom: 30px;">
+                        <label for="bank_slip" style="font-weight: 600; color: #1e3a8a; display: block; margin-bottom: 8px;">
+                            <i class="fas fa-image me-1"></i> Bank Transfer Slip/Receipt *
+                        </label>
+                        <div style="border: 2px dashed #e5e7eb; border-radius: 8px; padding: 30px; text-align: center; background: #f8f9fa; cursor: pointer; transition: all 0.3s;"
+                             onmouseover="this.style.borderColor='#0284c7'; this.style.backgroundColor='#e0f2fe';"
+                             onmouseout="this.style.borderColor='#e5e7eb'; this.style.backgroundColor='#f8f9fa';">
+                            <input type="file" id="bank_slip" name="bank_slip" accept="image/*" required style="display: none;">
+                            <div onclick="document.getElementById('bank_slip').click();">
+                                <i class="fas fa-cloud-upload-alt" style="font-size: 2rem; color: #0284c7; display: block; margin-bottom: 10px;"></i>
+                                <p style="font-weight: 600; color: #1e3a8a; margin: 0; cursor: pointer;">
+                                    Click to upload or drag and drop
+                                </p>
+                                <small style="color: #6b7280; display: block; margin-top: 5px;">
+                                    PNG, JPG, or PDF (Max 5MB)
+                                </small>
+                            </div>
+                        </div>
+                        <small style="color: #6b7280; display: block; margin-top: 8px;">
+                            <i class="fas fa-info-circle me-1"></i> Upload a clear image of your bank transfer slip or receipt
+                        </small>
+                    </div>
+
+                    <!-- File Preview -->
+                    <div id="file-preview" style="margin-bottom: 25px; display: none;">
+                        <p style="color: #6b7280; font-size: 0.9rem; margin-bottom: 10px;">Selected File:</p>
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; display: flex; align-items: center; gap: 10px;">
+                            <i class="fas fa-file-image" style="font-size: 1.5rem; color: #0284c7;"></i>
+                            <span id="file-name" style="color: #1e3a8a; font-weight: 500;"></span>
+                        </div>
+                    </div>
+
+                    <!-- Buttons -->
+                    <div style="display: flex; gap: 10px;">
+                        <button type="submit" class="btn w-100" style="background-color: #0284c7; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: 600; font-size: 1rem;">
+                            <i class="fas fa-check me-1"></i> Submit Payment
+                        </button>
+                        <a href="{% url 'accounts:investor_pending_payments' %}" class="btn w-100" style="background-color: transparent; color: #6b7280; border: 2px solid #e5e7eb; padding: 12px; border-radius: 8px; font-weight: 600; text-decoration: none;">
+                            Cancel
+                        </a>
+                    </div>
+                </form>
+
+                <!-- Info Box -->
+                <div style="background: #f0fdf4; border-left: 4px solid #10b981; padding: 20px; border-radius: 8px; margin-top: 30px;">
+                    <h6 style="color: #166534; font-weight: 700; margin-bottom: 10px;">
+                        <i class="fas fa-lightbulb me-2"></i> Payment Instructions
+                    </h6>
+                    <ul style="color: #4b5563; margin: 0; padding-left: 20px;">
+                        <li>Transfer the exact amount to our account</li>
+                        <li>Upload a clear image of your bank receipt</li>
+                        <li>Our admin will verify and approve your payment</li>
+                        <li>You'll receive email confirmation once approved</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('bank_slip').addEventListener('change', function(e) {
+        if (this.files.length > 0) {
+            const fileName = this.files[0].name;
+            document.getElementById('file-name').textContent = fileName;
+            document.getElementById('file-preview').style.display = 'block';
+        } else {
+            document.getElementById('file-preview').style.display = 'none';
+        }
+    });
+</script>
+{% endblock %}

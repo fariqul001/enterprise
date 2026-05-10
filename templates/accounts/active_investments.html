@@ -22,6 +22,10 @@
                         <td>${{ investment.amount }}</td>
                         <td>{{ investment.invested_date|date:'M d, Y' }}</td>
                         <td><span class="badge bg-success">{{ investment.status }}</span></td>
+                        <a href="{% url 'accounts:investment_report_detail' investment.id %}" 
+   class="btn btn-primary">
+    View Report
+</a>
                     </tr>
                 {% empty %}
                     <tr>

@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+
+{% block title %}Pending Monthly Payments{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div style="margin-bottom: 30px;">
+        <h2 style="color: #1e3a8a; font-weight: 800; font-size: 2rem; margin-bottom: 10px;">
+            <i class="fas fa-credit-card me-2"></i> Pending Monthly Payments
+        </h2>
+        <p style="color: #6b7280; font-size: 1.1rem;">Make your monthly installment payments here</p>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="row">
+        {% for investment in active_investments %}
+            <div class="col-lg-6 mb-4">
+                <div class="card shadow-sm" style="border-top: 4px solid #0284c7; height: 100%;">
+                    <div class="card-body">
+                        <h5 class="card-title" style="color: #1e3a8a; font-weight: 700;">{{ investment.fund.name }}</h5>
+                        
+                        <div style="background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); padding: 20px; border-radius: 10px; margin: 20px 0;">
+                            <div style="text-align: center;">
+                                <p style="font-size: 0.9rem; color: #0c4a6e; margin-bottom: 5px;">Initial Investment</p>
+                                <p style="font-size: 1.8rem; font-weight: 800; color: #0284c7; margin: 0;">${{ investment.amount|floatformat:2 }}</p>
+                            </div>
+                        </div>
+
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                            <p style="margin: 0; color: #6b7280;"><strong>Status:</strong> <span style="color: #10b981; font-weight: 600;">Active</span></p>
+                            <p style="margin: 10px 0 0 0; color: #6b7280;"><strong>Invested Date:</strong> {{ investment.invested_date|date:"M d, Y" }}</p>
+                        </div>
+
+                        <a href="{% url 'accounts:submit_monthly_payment' investment.pk %}" class="btn w-100 mb-2" style="background-color: #0284c7; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: 600;">
+                            <i class="fas fa-wallet me-1"></i> Submit Monthly Payment
+                        </a>
+                        
+                        <a href="{% url 'accounts:investment_report_detail' investment.pk %}" class="btn w-100" style="background-color: transparent; color: #0284c7; border: 2px solid #0284c7; padding: 12px; border-radius: 8px; font-weight: 600;">
+                            <i class="fas fa-file-invoice me-1"></i> View Payment History
+                        </a>
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <div class="col-12">
+                <div class="alert alert-info alert-lg" style="padding: 30px; border-radius: 10px;">
+                    <h5 style="color: #0c4a6e; margin-bottom: 10px;">
+                        <i class="fas fa-info-circle me-2"></i> No Active Investments
+                    </h5>
+                    <p style="margin: 0; color: #4b5563;">You don't have any active investments yet. Start investing today to make monthly payments.</p>
+                    <a href="{% url 'accounts:fund_list' %}" class="btn btn-sm mt-3" style="background-color: #0284c7; color: white;">
+                        Explore Funds
+                    </a>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

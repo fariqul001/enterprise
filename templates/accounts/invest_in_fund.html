@@ -22,7 +22,7 @@
                     <p><strong>Fund Name:</strong> {{ fund.name }}</p>
                     <p><strong>Expected Return:</strong> {{ fund.expected_return }}</p>
                     <p><strong>Duration:</strong> {{ fund.duration }}</p>
-                    <p><strong>Minimum Investment:</strong> ${{ fund.minimum_investment }}</p>
+                    <p><strong>Minimum Investment:</strong> {{ fund.minimum_investment }}</p>
 
                     <hr>
 
@@ -30,7 +30,7 @@
     {% csrf_token %}
     {{ form.as_p }}
     <button type="submit" class="btn btn-success">
-        Invest & Pay
+        Payment Now
     </button>
 </form>
 

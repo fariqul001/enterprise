@@ -35,12 +35,13 @@
                     <a href="{% url 'accounts:fund_list' %}" class="list-group-item list-group-item-action">
                         <i class="fas fa-layer-group me-2"></i>Explore Funds
                     </a>
+                    <a href="{% url 'accounts:investor_pending_payments' %}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-credit-card me-2"></i>Pending Monthly Payments
+                    </a>
                     <a href="{% url 'accounts:active_investments' %}" class="list-group-item list-group-item-action">
-                        <i class="fas fa-chart-line me-2"></i>My Investments
+                        <i class="fas fa-chart-line me-2"></i>My Investments Reports
                     </a>
-                    <a href="{% url 'accounts:payment' %}" class="list-group-item list-group-item-action">
-                        <i class="fas fa-credit-card me-2"></i>Pending Payments
-                    </a>
+                    
                     <a href="{% url 'accounts:profile' %}" class="list-group-item list-group-item-action">
                         <i class="fas fa-user me-2"></i>Profile Settings
                     </a>

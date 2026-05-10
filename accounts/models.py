@@ -154,11 +154,21 @@ class Installment(models.Model):
         return f"Installment for {self.investment} - Due {self.due_date}"
 
 class Payment(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+        ('completed', 'Completed'),
+    ]
+    
     investor = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='payments')
     installment = models.ForeignKey(Installment, on_delete=models.CASCADE, related_name='payment')
     amount = models.DecimalField(max_digits=15, decimal_places=2)
+    bank_slip = models.ImageField(upload_to='payment_slips/', null=True, blank=True)
     payment_date = models.DateTimeField(auto_now_add=True)
-    status = models.CharField(max_length=50, default='pending')
+    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='pending')
+    admin_note = models.TextField(blank=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return f"Payment by {self.investor.username} - {self.status}"

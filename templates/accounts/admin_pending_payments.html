@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+
+{% block title %}Admin - Pending Payments{% endblock %}
+
+{% block content %}
+<div class="container-fluid my-5">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+        <div>
+            <h2 style="color: #1e3a8a; font-weight: 800; font-size: 2rem; margin-bottom: 5px;">
+                <i class="fas fa-credit-card me-2"></i> Pending Payment Approvals
+            </h2>
+            <p style="color: #6b7280; margin: 0;">Review and manage investor monthly payment submissions</p>
+        </div>
+        <div style="background: #fef3c7; border-left: 4px solid #ca8a04; padding: 20px; border-radius: 8px;">
+            <p style="font-size: 0.9rem; color: #92400e; margin: 0;">Pending Payments</p>
+            <p style="font-size: 2rem; font-weight: 800; color: #ca8a04; margin: 0;">{{ pending_count }}</p>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div style="background: white; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.08); overflow: hidden;">
+        {% if pending_payments %}
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background-color: #f8f9fa; border-bottom: 2px solid #e5e7eb;">
+                            <th style="padding: 20px; text-align: left; color: #1e3a8a; font-weight: 700; font-size: 0.95rem;">Investor</th>
+                            <th style="padding: 20px; text-align: left; color: #1e3a8a; font-weight: 700; font-size: 0.95rem;">Fund</th>
+                            <th style="padding: 20px; text-align: left; color: #1e3a8a; font-weight: 700; font-size: 0.95rem;">Amount</th>
+                            <th style="padding: 20px; text-align: left; color: #1e3a8a; font-weight: 700; font-size: 0.95rem;">Bank Slip</th>
+                            <th style="padding: 20px; text-align: left; color: #1e3a8a; font-weight: 700; font-size: 0.95rem;">Submitted</th>
+                            <th style="padding: 20px; text-align: center; color: #1e3a8a; font-weight: 700; font-size: 0.95rem;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for payment in pending_payments %}
+                            <tr style="border-bottom: 1px solid #e5e7eb; transition: background-color 0.3s;" onmouseover="this.style.backgroundColor='#f8f9fa';" onmouseout="this.style.backgroundColor='white';">
+                                <td style="padding: 20px;">
+                                    <div style="font-weight: 600; color: #1e3a8a;">{{ payment.investor.username }}</div>
+                                    <small style="color: #6b7280;">{{ payment.investor.email }}</small>
+                                </td>
+                                <td style="padding: 20px;">
+                                    <div style="color: #1e3a8a; font-weight: 500;">{{ payment.installment.investment.fund.name }}</div>
+                                </td>
+                                <td style="padding: 20px;">
+                                    <div style="font-size: 1.1rem; font-weight: 700; color: #10b981;">${{ payment.amount|floatformat:2 }}</div>
+                                </td>
+                                <td style="padding: 20px;">
+                                    {% if payment.bank_slip %}
+                                        <a href="{{ payment.bank_slip.url }}" target="_blank" class="btn btn-sm" style="background-color: #0284c7; color: white; padding: 5px 12px; border: none; border-radius: 6px; font-size: 0.85rem; text-decoration: none;">
+                                            <i class="fas fa-image me-1"></i> View
+                                        </a>
+                                    {% else %}
+                                        <span style="color: #6b7280;">No slip</span>
+                                    {% endif %}
+                                </td>
+                                <td style="padding: 20px;">
+                                    <small style="color: #6b7280;">{{ payment.payment_date|date:"M d, Y H:i" }}</small>
+                                </td>
+                                <td style="padding: 20px; text-align: center;">
+                                    <button class="btn btn-sm" style="padding: 8px 12px; border: none; border-radius: 6px; background-color: #f3f4f6; color: #1e3a8a; font-weight: 600; cursor: pointer; margin: 0 3px;" onclick="toggleForm('payment-{{ payment.id }}')">
+                                        <i class="fas fa-check me-1"></i> Review
+                                    </button>
+                                </td>
+                            </tr>
+                            <!-- Approval/Rejection Form (Hidden) -->
+                            <tr id="payment-{{ payment.id }}" style="display: none; background-color: #f8f9fa; border-bottom: 2px solid #e5e7eb;">
+                                <td colspan="6" style="padding: 25px;">
+                                    <form method="POST" style="max-width: 600px;">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="payment_id" value="{{ payment.id }}">
+                                        
+                                        <div style="margin-bottom: 20px;">
+                                            <label style="font-weight: 600; color: #1e3a8a; display: block; margin-bottom: 10px;">Admin Note:</label>
+                                            <textarea name="admin_note" style="width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-family: Arial; font-size: 0.95rem; min-height: 80px;"></textarea>
+                                        </div>
+
+                                        <div style="display: flex; gap: 10px;">
+                                            <button type="submit" name="action" value="approve" class="btn" style="background-color: #10b981; color: white; padding: 10px 20px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                                                <i class="fas fa-check me-1"></i> Approve Payment
+                                            </button>
+                                            <button type="submit" name="action" value="reject" class="btn" style="background-color: #ef4444; color: white; padding: 10px 20px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                                                <i class="fas fa-times me-1"></i> Reject Payment
+                                            </button>
+                                            <button type="button" class="btn" style="background-color: #e5e7eb; color: #1e3a8a; padding: 10px 20px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;" onclick="toggleForm('payment-{{ payment.id }}')">
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div style="text-align: center; padding: 60px 20px;">
+                <i class="fas fa-check-circle" style="font-size: 3rem; color: #10b981; display: block; margin-bottom: 15px;"></i>
+                <h4 style="color: #1e3a8a; font-weight: 700; margin-bottom: 10px;">No Pending Payments</h4>
+                <p style="color: #6b7280;">All payments have been reviewed and processed!</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    function toggleForm(elementId) {
+        const element = document.getElementById(elementId);
+        if (element.style.display === 'none') {
+            element.style.display = 'table-row';
+        } else {
+            element.style.display = 'none';
+        }
+    }
+</script>
+{% endblock %}

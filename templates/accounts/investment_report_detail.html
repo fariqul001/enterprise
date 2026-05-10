@@ -1,0 +1,142 @@
+{% extends 'base.html' %}
+
+{% block title %}Investment Report{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+        <div>
+            <h2 style="color: #1e3a8a; font-weight: 800; font-size: 2rem; margin-bottom: 5px;">
+                <i class="fas fa-file-invoice me-2"></i> Investment Report
+            </h2>
+            <p style="color: #6b7280; margin: 0;">Detailed payment history and status</p>
+        </div>
+        <a href="{% url 'accounts:investor_pending_payments' %}" class="btn" style="background-color: #6b7280; color: white; padding: 10px 20px; border: none; border-radius: 8px; text-decoration: none;">
+            <i class="fas fa-arrow-left me-1"></i> Back
+        </a>
+    </div>
+
+    <!-- Fund Summary -->
+    <div class="row">
+        <div class="col-lg-8">
+            <div style="background: white; padding: 30px; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.08); margin-bottom: 30px;">
+                <h4 style="color: #1e3a8a; font-weight: 700; margin-bottom: 25px;">Fund Summary</h4>
+                
+                <div style="background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); padding: 25px; border-radius: 10px; margin-bottom: 25px;">
+                    <h5 style="color: #0c4a6e; margin-bottom: 15px; font-weight: 700;">{{ investment.fund.name }}</h5>
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
+                        <div>
+                            <p style="font-size: 0.85rem; color: #0c4a6e; margin-bottom: 5px;">Duration</p>
+                            <p style="font-size: 1.1rem; font-weight: 600; color: #1e3a8a; margin: 0;">{{ investment.fund.duration }}</p>
+                        </div>
+                        <div>
+                            <p style="font-size: 0.85rem; color: #0c4a6e; margin-bottom: 5px;">Expected Return</p>
+                            <p style="font-size: 1.1rem; font-weight: 600; color: #10b981; margin: 0;">{{ investment.fund.expected_return }}</p>
+                        </div>
+                        <div>
+                            <p style="font-size: 0.85rem; color: #0c4a6e; margin-bottom: 5px;">Start Date</p>
+                            <p style="font-size: 1.1rem; font-weight: 600; color: #1e3a8a; margin: 0;">{{ investment.paid_at|date:"M d, Y"|default:investment.invested_date|date:"M d, Y" }}</p>
+                        </div>
+                        <div>
+                            <p style="font-size: 0.85rem; color: #0c4a6e; margin-bottom: 5px;">Status</p>
+                            <p style="font-size: 1.1rem; font-weight: 600; color: #10b981; margin: 0; text-transform: capitalize;">{{ investment.status }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="col-lg-4">
+            <div style="background: white; padding: 25px; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.08); margin-bottom: 20px; border-top: 4px solid #0284c7;">
+                <p style="font-size: 0.85rem; color: #6b7280; margin-bottom: 8px;">Total Invested</p>
+                <p style="font-size: 2rem; font-weight: 800; color: #0284c7; margin: 0;">${{ total_due|floatformat:2 }}</p>
+            </div>
+
+            <div style="background: white; padding: 25px; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.08); margin-bottom: 20px; border-top: 4px solid #10b981;">
+                <p style="font-size: 0.85rem; color: #6b7280; margin-bottom: 8px;">Total Paid</p>
+                <p style="font-size: 2rem; font-weight: 800; color: #10b981; margin: 0;">${{ total_paid|floatformat:2 }}</p>
+            </div>
+
+            <div style="background: white; padding: 25px; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.08); border-top: 4px solid #f59e0b;">
+                <p style="font-size: 0.85rem; color: #6b7280; margin-bottom: 8px;">Remaining</p>
+                <p style="font-size: 2rem; font-weight: 800; color: #f59e0b; margin: 0;">${{ total_due|add:total_paid|add:-1|floatformat:2 }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment History -->
+    <div style="background: white; padding: 30px; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.08);">
+        <h4 style="color: #1e3a8a; font-weight: 700; margin-bottom: 25px;">
+            <i class="fas fa-history me-2"></i> Payment History
+        </h4>
+
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background-color: #f8f9fa; border-bottom: 2px solid #e5e7eb;">
+                        <th style="padding: 15px; text-align: left; color: #1e3a8a; font-weight: 700; font-size: 0.95rem;">Payment Type</th>
+                        <th style="padding: 15px; text-align: left; color: #1e3a8a; font-weight: 700; font-size: 0.95rem;">Amount</th>
+                        <th style="padding: 15px; text-align: left; color: #1e3a8a; font-weight: 700; font-size: 0.95rem;">Date</th>
+                        <th style="padding: 15px; text-align: left; color: #1e3a8a; font-weight: 700; font-size: 0.95rem;">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for payment in payment_history %}
+                        <tr style="border-bottom: 1px solid #e5e7eb;">
+                            <td style="padding: 15px;">
+                                <div style="font-weight: 600; color: #1e3a8a;">
+                                    <i class="fas fa-{% if payment.type == 'Down Payment' %}money-bill{% else %}calendar-day{% endif %} me-2"></i>
+                                    {{ payment.type }}
+                                </div>
+                            </td>
+                            <td style="padding: 15px;">
+                                <span style="font-size: 1.1rem; font-weight: 700; color: #0284c7;">${{ payment.amount|floatformat:2 }}</span>
+                            </td>
+                            <td style="padding: 15px;">
+                                <small style="color: #6b7280;">{{ payment.date|date:"M d, Y" }}</small>
+                            </td>
+                            <td style="padding: 15px;">
+                                <span style="display: inline-block; padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; 
+                                {% if payment.status == 'Completed' %}
+                                    background-color: #d1fae5; color: #065f46;
+                                {% elif payment.status == 'pending' %}
+                                    background-color: #fef3c7; color: #92400e;
+                                {% else %}
+                                    background-color: #fee2e2; color: #991b1b;
+                                {% endif %}">
+                                    {{ payment.status }}
+                                </span>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="4" style="padding: 30px; text-align: center; color: #6b7280;">
+                                No payment history available
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Summary Stats -->
+        <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-top: 25px;">
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+                <div style="text-align: center;">
+                    <p style="font-size: 0.85rem; color: #6b7280; margin-bottom: 5px;">Total Transactions</p>
+                    <p style="font-size: 1.5rem; font-weight: 800; color: #1e3a8a; margin: 0;">{{ payment_history|length }}</p>
+                </div>
+                <div style="text-align: center;">
+                    <p style="font-size: 0.85rem; color: #6b7280; margin-bottom: 5px;">Completed Payments</p>
+                    <p style="font-size: 1.5rem; font-weight: 800; color: #10b981; margin: 0;">{{ paid_count }}</p>
+                </div>
+                <div style="text-align: center;">
+                    <p style="font-size: 0.85rem; color: #6b7280; margin-bottom: 5px;">Remaining Installments</p>
+                    <p style="font-size: 1.5rem; font-weight: 800; color: #f59e0b; margin: 0;">{{ remaining_installments }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

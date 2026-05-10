@@ -37,6 +37,10 @@
                             <label class="form-label">Total Capacity</label>
                             {{ form.total_capacity }}
                         </div>
+                        <div class="mb-3">
+    <label class="form-label">Status</label>
+    {{ form.status }}
+</div>
                         <button type="submit" class="btn btn-primary w-100">Create Fund</button>
                     </form>
                 </div>
@@ -44,4 +48,10 @@
         </div>
     </div>
 </div>
+
+{% if form.errors %}
+<div class="alert alert-danger">
+    {{ form.errors }}
+</div>
+{% endif %}
 {% endblock %}

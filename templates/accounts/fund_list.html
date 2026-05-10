@@ -6,20 +6,64 @@
 <div class="container my-5">
     <h2 class="mb-4"><i class="fas fa-layer-group me-2"></i>Available Investment Funds</h2>
     <div class="row">
-        {% for fund in funds %}
+        {% for item in funds_with_status %}
             <div class="col-md-6 mb-4">
-                <div class="card shadow-sm">
+                <div class="card shadow-sm" style="border-top: 4px solid {% if item.is_enrolled %}#10b981{% else %}#0284c7{% endif %}; height: 100%; position: relative;">
+                    {% if item.is_enrolled %}
+                        <div style="position: absolute; top: 15px; right: 15px; background: #10b981; color: white; padding: 8px 15px; border-radius: 20px; font-size: 0.85rem; font-weight: 600;">
+                            <i class="fas fa-check me-1"></i> Enrolled
+                        </div>
+                    {% endif %}
                     <div class="card-body">
-                        <h5 class="card-title">{{ fund.name }}</h5>
-                        <p class="card-text">{{ fund.description }}</p>
-                        <p><strong>Minimum Investment:</strong> ${{ fund.minimum_investment|floatformat:2 }}</p>
-                        <p><strong>Expected Return:</strong> {{ fund.expected_return }}</p>
-                        <p><strong>Duration:</strong> {{ fund.duration }}</p>
-                        <p><strong>Total Capacity:</strong> ${{ fund.total_capacity|floatformat:2 }}</p>
-                        <p><strong>Invested Amount:</strong> ${{ fund.invested_amount|floatformat:2 }}</p>
-                        <a href="{% url 'accounts:invest_in_fund' fund.pk %}" class="btn btn-success w-100">
-    <i class="fas fa-wallet me-1"></i> Invest Now
-</a>
+                        <h5 class="card-title" style="margin-top: {% if item.is_enrolled %}20px{% else %}0{% endif %}; color: #1e3a8a;">{{ item.fund.name }}</h5>
+                        <p class="card-text" style="color: #6b7280;">{{ item.fund.description }}</p>
+                        
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                                <div>
+                                    <p style="font-size: 0.85rem; color: #6b7280; margin-bottom: 5px;">Min Investment</p>
+                                    <p style="font-size: 1.1rem; font-weight: 700; color: #1e3a8a; margin: 0;">${{ item.fund.minimum_investment|floatformat:2 }}</p>
+                                </div>
+                                <div>
+                                    <p style="font-size: 0.85rem; color: #6b7280; margin-bottom: 5px;">Expected Return</p>
+                                    <p style="font-size: 1.1rem; font-weight: 700; color: #10b981; margin: 0;">{{ item.fund.expected_return }}</p>
+                                </div>
+                                <div>
+                                    <p style="font-size: 0.85rem; color: #6b7280; margin-bottom: 5px;">Duration</p>
+                                    <p style="font-size: 1rem; font-weight: 600; color: #1e3a8a; margin: 0;">{{ item.fund.duration }}</p>
+                                </div>
+                                <div>
+                                    <p style="font-size: 0.85rem; color: #6b7280; margin-bottom: 5px;">Capacity</p>
+                                    <p style="font-size: 1rem; font-weight: 600; color: #1e3a8a; margin: 0;">${{ item.fund.total_capacity|floatformat:0 }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: 15px;">
+                            <p style="font-size: 0.9rem; color: #6b7280; margin-bottom: 10px;">
+                                <strong>Capacity Used:</strong> ${{ item.fund.invested_amount|floatformat:2 }} / ${{ item.fund.total_capacity|floatformat:2 }}
+                            </p>
+                            <div style="background: #e5e7eb; height: 6px; border-radius: 3px; overflow: hidden;">
+                                <div style="background: linear-gradient(90deg, #0284c7, #10b981); height: 100%; width: {% widthratio item.fund.invested_amount item.fund.total_capacity 100 %}%;"></div>
+                            </div>
+                        </div>
+                        
+                        {% if item.is_enrolled %}
+                            <div style="margin-top: 20px;">
+                                <p style="color: #6b7280; font-size: 0.9rem; margin-bottom: 10px;">
+                                    <i class="fas fa-info-circle" style="color: #10b981;"></i> You are already enrolled in this fund
+                                </p>
+                                <a href="{% url 'accounts:investor_pending_payments' %}" class="btn btn-sm w-100" style="background-color: #10b981; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: 600;">
+                                    <i class="fas fa-wallet me-1"></i> Make Monthly Payment
+                                </a>
+                            </div>
+                        {% else %}
+                            <div style="margin-top: 20px;">
+                                <a href="{% url 'accounts:invest_in_fund' item.fund.pk %}" class="btn btn-sm w-100" style="background-color: #0284c7; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: 600;">
+                                    <i class="fas fa-wallet me-1"></i> Start Investment
+                                </a>
+                            </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>

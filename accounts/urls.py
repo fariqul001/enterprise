@@ -29,11 +29,16 @@ urlpatterns = [
     path('admin/fund-applications/', views.admin_fund_applications, name='admin_fund_applications'),
     path('admin/reports/', views.admin_reports, name='admin_reports'),
     path('admin/reports/download/', views.admin_reports_download, name='admin_reports_download'),
+    path('admin/pending-payments/', views.admin_pending_payments, name='admin_pending_payments'),
+    path('admin/investor-overview/', views.admin_investor_funds_overview, name='admin_investor_funds_overview'),
+    path('admin/investor/<int:investor_id>/detail/', views.admin_investor_detail, name='admin_investor_detail'),
     path('send-reminder/', views.send_monthly_reminder, name='send_reminder'),
     path('investment-history/', views.investment_history, name='investment_history'),
+    path('pending-payments/', views.investor_pending_payments, name='investor_pending_payments'),
+    path('submit-payment/<int:investment_id>/', views.submit_monthly_payment, name='submit_monthly_payment'),
+    path('investment-report/<int:investment_id>/', views.investment_report_detail, name='investment_report_detail'),
     path('ssl-pay/<int:pk>/', views.ssl_payment, name='ssl_payment'),
     path('payment/success/', views.payment_success, name='payment_success'),
     path('payment/fail/', views.payment_fail, name='payment_fail'),
     path('payment/cancel/', views.payment_cancel, name='payment_cancel'),
-
 ]

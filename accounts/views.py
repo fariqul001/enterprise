@@ -20,6 +20,7 @@ from django.core.mail import EmailMessage
 from .sslcommerz import initiate_payment
 from django.views.decorators.csrf import csrf_exempt
 
+
 def home(request):
     return render(request, 'accounts/home.html')
 
@@ -404,8 +405,21 @@ def profile(request):
     return render(request, 'accounts/profile.html', context)
 @login_required
 def fund_list(request):
-    funds = Fund.objects.all()
-    return render(request, 'accounts/fund_list.html', {'funds': funds})
+    # Only show active funds
+    funds = Fund.objects.filter(status=Fund.STATUS_ACTIVE)
+    
+    # Get user's existing investments
+    user_investments = Investment.objects.filter(investor=request.user).values_list('fund_id', flat=True)
+    
+    # Add enrollment status to each fund
+    funds_with_status = []
+    for fund in funds:
+        funds_with_status.append({
+            'fund': fund,
+            'is_enrolled': fund.id in user_investments
+        })
+    
+    return render(request, 'accounts/fund_list.html', {'funds_with_status': funds_with_status})
 
 def invest_in_fund(request, pk):
     if request.user.role == 'viewer':
@@ -413,6 +427,17 @@ def invest_in_fund(request, pk):
         return redirect('accounts:apply_kyc')
 
     fund = get_object_or_404(Fund, pk=pk)
+    
+    # Check if fund is active
+    if fund.status != Fund.STATUS_ACTIVE:
+        messages.error(request, 'This fund is no longer accepting investments.')
+        return redirect('accounts:fund_list')
+    
+    # Check if user already invested in this fund
+    existing_investment = Investment.objects.filter(investor=request.user, fund=fund).exists()
+    if existing_investment:
+        messages.warning(request, 'You are already enrolled in this fund. You can make monthly payments instead.')
+        return redirect('accounts:fund_list')
 
     if request.method == 'POST':
         form = InvestmentForm(request.POST)
@@ -705,6 +730,316 @@ def investment_history(request):
     })
 
 
+# NEW: Investor Pending Monthly Payments
+@login_required
+def investor_pending_payments(request):
+    if request.user.role == 'admin':
+        return redirect('accounts:admin_dashboard')
+    
+    # Get active investments for this investor
+    active_investments = Investment.objects.filter(
+        investor=request.user, 
+        status='active'
+    ).select_related('fund')
+    
+    return render(request, 'accounts/investor_pending_payments.html', {
+        'active_investments': active_investments
+    })
+
+
+# NEW: Submit monthly payment with bank slip
+@login_required
+def submit_monthly_payment(request, investment_id):
+    if request.user.role == 'admin':
+        return redirect('accounts:admin_dashboard')
+    
+    investment = get_object_or_404(Investment, id=investment_id, investor=request.user)
+    
+    if request.method == 'POST':
+        amount = request.POST.get('amount')
+        bank_slip = request.FILES.get('bank_slip')
+        
+        if not amount or not bank_slip:
+            messages.error(request, 'Please provide amount and bank slip image.')
+            return redirect('accounts:investor_pending_payments')
+        
+        try:
+            amount = float(amount)
+            if amount <= 0:
+                raise ValueError("Amount must be greater than 0")
+        except (ValueError, TypeError):
+            messages.error(request, 'Invalid amount.')
+            return redirect('accounts:investor_pending_payments')
+        
+        # Get or create pending installment
+        pending_installment = Installment.objects.filter(
+            investment=investment,
+            paid=False
+        ).first()
+        
+        if pending_installment:
+            # Create or update payment record
+            payment = Payment.objects.create(
+                investor=request.user,
+                installment=pending_installment,
+                amount=amount,
+                bank_slip=bank_slip,
+                status='pending'
+            )
+            messages.success(request, 'Monthly payment submitted successfully. Admin will review and approve it.')
+        else:
+            messages.error(request, 'No pending installments for this investment.')
+        
+        return redirect('accounts:investor_pending_payments')
+    
+    return render(request, 'accounts/submit_monthly_payment.html', {'investment': investment})
+
+
+# NEW: Admin Pending Payments Management
+@login_required
+def admin_pending_payments(request):
+    if request.user.role != 'admin':
+        return HttpResponseForbidden('Access denied')
+    
+    # Get all pending payments
+    pending_payments = Payment.objects.filter(status='pending').select_related(
+        'investor', 'installment__investment__fund'
+    ).order_by('-payment_date')
+    
+    # Handle approval/rejection
+    if request.method == 'POST':
+        payment_id = request.POST.get('payment_id')
+        action = request.POST.get('action')
+        admin_note = request.POST.get('admin_note', '')
+        
+        payment = get_object_or_404(Payment, id=payment_id)
+        
+        if action == 'approve':
+            payment.status = 'approved'
+            payment.installment.paid = True
+            payment.installment.paid_date = timezone.now().date()
+            payment.installment.save()
+            payment.reviewed_at = timezone.now()
+            payment.admin_note = admin_note or 'Payment approved by admin.'
+            payment.save()
+            
+            # Send approval email to investor
+            subject = "Monthly Payment Approved"
+            message = f"""
+Dear {payment.investor.username},
+
+Your monthly installment payment of {payment.amount} for {payment.installment.investment.fund.name} has been approved.
+
+Your account has been updated accordingly.
+
+Thank you for your commitment to your investment.
+
+Best regards,
+Enterprise Fund & Investment Management Team
+            """
+            email = EmailMessage(subject, message, settings.EMAIL_HOST_USER, [payment.investor.email])
+            email.send()
+            
+            messages.success(request, 'Payment approved successfully.')
+        
+        elif action == 'reject':
+            payment.status = 'rejected'
+            payment.reviewed_at = timezone.now()
+            payment.admin_note = admin_note or 'Payment rejected. Please check and resubmit.'
+            payment.save()
+            
+            # Send rejection email to investor
+            subject = "Monthly Payment Status - Action Required"
+            message = f"""
+Dear {payment.investor.username},
+
+Your monthly installment payment submission for {payment.installment.investment.fund.name} could not be approved.
+
+Reason: {payment.admin_note}
+
+Please review and resubmit your payment with the correct details.
+
+Best regards,
+Enterprise Fund & Investment Management Team
+            """
+            email = EmailMessage(subject, message, settings.EMAIL_HOST_USER, [payment.investor.email])
+            email.send()
+            
+            messages.success(request, 'Payment rejected.')
+        
+        return redirect('accounts:admin_pending_payments')
+    
+    return render(request, 'accounts/admin_pending_payments.html', {
+        'pending_payments': pending_payments,
+        'pending_count': pending_payments.count()
+    })
+
+
+# NEW: Investor Investment Report Detail
+@login_required
+def investment_report_detail(request, investment_id):
+
+    if request.user.role == 'admin':
+        return redirect('accounts:admin_dashboard')
+
+    investment = get_object_or_404(
+        Investment,
+        id=investment_id,
+        investor=request.user
+    )
+
+    installments = Installment.objects.filter(
+        investment=investment
+    ).order_by('due_date')
+
+    payment_history = []
+    total_paid = 0
+    paid_count = 0
+
+    # Installments
+    for installment in installments:
+        if installment.paid:
+            paid_count += 1
+            total_paid += float(installment.amount)
+
+            payment_history.append({
+                'type': 'Monthly Installment',
+                'amount': installment.amount,
+                'date': installment.paid_date,
+                'status': 'Completed'
+            })
+
+    # Down payment
+    payment_history.insert(0, {
+        'type': 'Down Payment',
+        'amount': investment.amount,
+        'date': investment.paid_at or investment.invested_date,
+        'status': 'Completed' if investment.status == 'active' else investment.status
+    })
+
+    total_paid += float(investment.amount)
+
+    total_due = float(investment.amount) + sum(
+        float(i.amount) for i in installments
+    )
+
+    remaining_installments = len(installments) - paid_count
+
+    context = {
+        'investment': investment,
+        'payment_history': payment_history,
+        'total_due': total_due,
+        'total_paid': total_paid,
+        'paid_count': paid_count,
+        'installments': installments,
+        'remaining_installments': remaining_installments,
+    }
+
+    return render(request, 'accounts/investment_report_detail.html', context)
+
+# NEW: Admin Investor Funds Overview
+@login_required
+def admin_investor_funds_overview(request):
+    if request.user.role != 'admin':
+        return HttpResponseForbidden('Access denied')
+    
+    # Get all investors
+    investors = CustomUser.objects.filter(role='investor').select_related('kyc')
+    
+    investor_cards = []
+    
+    for investor in investors:
+        # Get KYC info
+        kyc = getattr(investor, 'kyc', None)
+        joined_date = kyc.submitted_at if kyc else investor.date_joined
+        
+        # Get all investments
+        investments = Investment.objects.filter(investor=investor)
+        
+        # Calculate metrics
+        total_funds = investments.filter(status='active').count()
+        total_amount_paid = investments.aggregate(total=models.Sum('amount'))['total'] or 0
+        
+        # Count transactions
+        total_transactions = Installment.objects.filter(
+            investment__investor=investor, paid=True
+        ).count() + investments.filter(status='active').count()
+        
+        # Check current monthly installment status
+        pending_monthly = Installment.objects.filter(
+            investment__investor=investor,
+            investment__status='active',
+            paid=False,
+            due_date__lte=timezone.now().date()
+        ).exists()
+        
+        investor_cards.append({
+            'user': investor,
+            'kyc': kyc,
+            'joined_date': joined_date,
+            'total_funds': total_funds,
+            'total_amount_paid': total_amount_paid,
+            'total_transactions': total_transactions,
+            'pending_monthly': pending_monthly,
+            'kyc_status': kyc.get_status_display() if kyc else 'Not Applied',
+        })
+    
+    return render(request, 'accounts/admin_investor_funds_overview.html', {
+        'investor_cards': investor_cards
+    })
+
+from django.db.models import Sum
+# NEW: Admin View Investor Fund Details
+@login_required
+def admin_investor_detail(request, investor_id):
+    if request.user.role != 'admin':
+        return HttpResponseForbidden('Access denied')
+    
+    investor = get_object_or_404(CustomUser, id=investor_id, role='investor')
+    kyc = getattr(investor, 'kyc', None)
+    
+    # Get all investments
+    active_investments = Investment.objects.filter(
+        investor=investor, status='active'
+    ).select_related('fund')
+    
+    # Prepare investment details
+    investment_details = []
+    for inv in active_investments:
+        installments = Installment.objects.filter(investment=inv)
+
+        paid_installments = installments.filter(paid=True).count()
+        total_installments = installments.count()
+
+        total_amount = installments.aggregate(
+            total=Sum('amount')
+        )['total'] or 0
+
+        total_paid = Installment.objects.filter(
+            investment=inv,
+            paid=True
+        ).aggregate(
+            total=Sum('amount')
+        )['total'] or 0
+
+        investment_details.append({
+            'investment': inv,
+            'paid_installments': paid_installments,
+            'total_installments': total_installments,
+            'total_amount': inv.amount + total_amount,
+            'total_paid': inv.amount + total_paid,
+        })
+    
+    context = {
+        'investor': investor,
+        'kyc': kyc,
+        'investment_details': investment_details,
+        'total_funds': active_investments.count(),
+    }
+    
+    return render(request, 'accounts/admin_investor_detail.html', context)
+
+
 
 @csrf_exempt
 def payment_success(request):
@@ -731,6 +1066,16 @@ def payment_success(request):
             investment.status = "active"
             investment.transaction_id = tran_id
             investment.save()
+            monthly_amount = investment.amount / 12
+
+            for i in range(1, 13):
+                Installment.objects.create(
+                     investment=investment,
+                     amount=monthly_amount,
+                     due_date=timezone.now().date() + timedelta(days=30 * i),
+                     paid=False
+                 )
+            
 
             fund = investment.fund
             fund.invested_amount += investment.amount

@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+
+{% block title %}Admin - Investor Funds Overview{% endblock %}
+
+{% block content %}
+<div class="container-fluid my-5">
+    <div style="margin-bottom: 40px;">
+        <h2 style="color: #1e3a8a; font-weight: 800; font-size: 2rem; margin-bottom: 10px;">
+            <i class="fas fa-users me-2"></i> Investor Funds Overview
+        </h2>
+        <p style="color: #6b7280; font-size: 1rem;">View all investors and their investment details</p>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="row g-4">
+        {% for card in investor_cards %}
+            <div class="col-lg-6 col-xxl-4">
+                <div class="card shadow-sm" style="border-top: 4px solid #0284c7; height: 100%; cursor: pointer; transition: transform 0.3s, box-shadow 0.3s;" 
+                     onclick="location.href='{% url 'accounts:admin_investor_detail' card.user.id %}'; return false;"
+                     onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 10px 30px rgba(0,0,0,0.15)';"
+                     onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 10px rgba(0,0,0,0.08)';">
+                    
+                    <!-- Header -->
+                    <div style="background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); padding: 25px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <h5 style="color: #1e3a8a; font-weight: 700; margin-bottom: 5px; font-size: 1.2rem;">{{ card.user.get_full_name|default:card.user.username }}</h5>
+                                <small style="color: #0c4a6e;">{{ card.user.email }}</small>
+                            </div>
+                            {% if card.pending_monthly %}
+                                <span style="background-color: #ef4444; color: white; padding: 8px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600;">
+                                    PENDING
+                                </span>
+                            {% else %}
+                                <span style="background-color: #10b981; color: white; padding: 8px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600;">
+                                    CURRENT
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Body -->
+                    <div class="card-body" style="padding: 25px;">
+                        <!-- KYC Status -->
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                            <p style="font-size: 0.85rem; color: #6b7280; margin-bottom: 5px;">KYC Status</p>
+                            <p style="margin: 0;">
+                                {% if card.kyc_status == 'Approved' %}
+                                    <span style="display: inline-block; padding: 6px 12px; background-color: #d1fae5; color: #065f46; border-radius: 6px; font-weight: 600; font-size: 0.9rem;">
+                                        <i class="fas fa-check me-1"></i> {{ card.kyc_status }}
+                                    </span>
+                                {% else %}
+                                    <span style="display: inline-block; padding: 6px 12px; background-color: #fef3c7; color: #92400e; border-radius: 6px; font-weight: 600; font-size: 0.9rem;">
+                                        {{ card.kyc_status }}
+                                    </span>
+                                {% endif %}
+                            </p>
+                        </div>
+
+                        <!-- Metrics Grid -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                            <div style="text-align: center; padding: 15px; background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); border-radius: 8px;">
+                                <p style="font-size: 0.8rem; color: #0c4a6e; margin-bottom: 5px;">Active Funds</p>
+                                <p style="font-size: 1.8rem; font-weight: 800; color: #0284c7; margin: 0;">{{ card.total_funds }}</p>
+                            </div>
+                            <div style="text-align: center; padding: 15px; background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); border-radius: 8px;">
+                                <p style="font-size: 0.8rem; color: #166534; margin-bottom: 5px;">Joined</p>
+                                <p style="font-size: 0.95rem; font-weight: 600; color: #15803d; margin: 0;">{{ card.joined_date|date:"M d, Y" }}</p>
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div style="text-align: center; padding: 15px; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 8px;">
+                                <p style="font-size: 0.8rem; color: #92400e; margin-bottom: 5px;">Total Paid</p>
+                                <p style="font-size: 1.4rem; font-weight: 800; color: #ca8a04; margin: 0;">${{ card.total_amount_paid|floatformat:0 }}</p>
+                            </div>
+                            <div style="text-align: center; padding: 15px; background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); border-radius: 8px;">
+                                <p style="font-size: 0.8rem; color: #991b1b; margin-bottom: 5px;">Transactions</p>
+                                <p style="font-size: 1.4rem; font-weight: 800; color: #dc2626; margin: 0;">{{ card.total_transactions }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div style="padding: 20px 25px; background: #f8f9fa; border-top: 1px solid #e5e7eb; text-align: center; border-radius: 0 0 12px 12px;">
+                        <a href="{% url 'accounts:admin_investor_detail' card.user.id %}" style="color: #0284c7; text-decoration: none; font-weight: 600; font-size: 0.95rem;">
+                            View Details <i class="fas fa-arrow-right ms-1"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <div class="col-12">
+                <div class="alert alert-info alert-lg" style="padding: 40px; border-radius: 10px; text-align: center;">
+                    <i class="fas fa-info-circle" style="font-size: 2rem; color: #0c4a6e; display: block; margin-bottom: 15px;"></i>
+                    <h5 style="color: #0c4a6e; margin-bottom: 10px;">No Investors Yet</h5>
+                    <p style="color: #4b5563; margin: 0;">No investors have been registered or approved yet.</p>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
