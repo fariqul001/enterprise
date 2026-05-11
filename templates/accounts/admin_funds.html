@@ -34,8 +34,6 @@
                         <p class="card-text">{{ fund.description }}</p>
                         <p><strong>Minimum Investment:</strong> {{ fund.minimum_investment }}</p>
                         <p><strong>Expected Return:</strong> {{ fund.expected_return }}</p>
-                        <p><strong>Duration:</strong> {{ fund.duration }}</p>
-                        <p><strong>Total Capacity:</strong> {{ fund.total_capacity }}</p>
                         <p><strong>Invested Amount:</strong> {{ fund.invested_amount }}</p>
                         <div class="mt-auto d-flex gap-2">
                             <form method="post" action="{% url 'accounts:admin_toggle_fund' fund.pk %}">

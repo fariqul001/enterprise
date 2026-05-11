@@ -26,10 +26,6 @@
                     <h5 style="color: #0c4a6e; margin-bottom: 15px; font-weight: 700;">{{ investment.fund.name }}</h5>
                     <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
                         <div>
-                            <p style="font-size: 0.85rem; color: #0c4a6e; margin-bottom: 5px;">Duration</p>
-                            <p style="font-size: 1.1rem; font-weight: 600; color: #1e3a8a; margin: 0;">{{ investment.fund.duration }}</p>
-                        </div>
-                        <div>
                             <p style="font-size: 0.85rem; color: #0c4a6e; margin-bottom: 5px;">Expected Return</p>
                             <p style="font-size: 1.1rem; font-weight: 600; color: #10b981; margin: 0;">{{ investment.fund.expected_return }}</p>
                         </div>
@@ -48,19 +44,9 @@
 
         <!-- Summary Cards -->
         <div class="col-lg-4">
-            <div style="background: white; padding: 25px; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.08); margin-bottom: 20px; border-top: 4px solid #0284c7;">
-                <p style="font-size: 0.85rem; color: #6b7280; margin-bottom: 8px;">Total Invested</p>
-                <p style="font-size: 2rem; font-weight: 800; color: #0284c7; margin: 0;">${{ total_due|floatformat:2 }}</p>
-            </div>
-
             <div style="background: white; padding: 25px; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.08); margin-bottom: 20px; border-top: 4px solid #10b981;">
-                <p style="font-size: 0.85rem; color: #6b7280; margin-bottom: 8px;">Total Paid</p>
-                <p style="font-size: 2rem; font-weight: 800; color: #10b981; margin: 0;">${{ total_paid|floatformat:2 }}</p>
-            </div>
-
-            <div style="background: white; padding: 25px; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.08); border-top: 4px solid #f59e0b;">
-                <p style="font-size: 0.85rem; color: #6b7280; margin-bottom: 8px;">Remaining</p>
-                <p style="font-size: 2rem; font-weight: 800; color: #f59e0b; margin: 0;">${{ total_due|add:total_paid|add:-1|floatformat:2 }}</p>
+                <p style="font-size: 0.85rem; color: #6b7280; margin-bottom: 8px;">Total Invested</p>
+                <p style="font-size: 2rem; font-weight: 800; color: #10b981; margin: 0;">{{ total_paid }}</p>
             </div>
         </div>
     </div>
@@ -91,21 +77,21 @@
                                 </div>
                             </td>
                             <td style="padding: 15px;">
-                                <span style="font-size: 1.1rem; font-weight: 700; color: #0284c7;">${{ payment.amount|floatformat:2 }}</span>
+                                <span style="font-size: 1.1rem; font-weight: 700; color: #0284c7;">{{ payment.amount }}</span>
                             </td>
                             <td style="padding: 15px;">
                                 <small style="color: #6b7280;">{{ payment.date|date:"M d, Y" }}</small>
                             </td>
                             <td style="padding: 15px;">
                                 <span style="display: inline-block; padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; 
-                                {% if payment.status == 'Completed' %}
+                                {% if payment.status == 'Completed' or payment.status == 'approved' %}
                                     background-color: #d1fae5; color: #065f46;
                                 {% elif payment.status == 'pending' %}
                                     background-color: #fef3c7; color: #92400e;
                                 {% else %}
                                     background-color: #fee2e2; color: #991b1b;
                                 {% endif %}">
-                                    {{ payment.status }}
+                                    {{ payment.status|title }}
                                 </span>
                             </td>
                         </tr>
@@ -120,23 +106,6 @@
             </table>
         </div>
 
-        <!-- Summary Stats -->
-        <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-top: 25px;">
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
-                <div style="text-align: center;">
-                    <p style="font-size: 0.85rem; color: #6b7280; margin-bottom: 5px;">Total Transactions</p>
-                    <p style="font-size: 1.5rem; font-weight: 800; color: #1e3a8a; margin: 0;">{{ payment_history|length }}</p>
-                </div>
-                <div style="text-align: center;">
-                    <p style="font-size: 0.85rem; color: #6b7280; margin-bottom: 5px;">Completed Payments</p>
-                    <p style="font-size: 1.5rem; font-weight: 800; color: #10b981; margin: 0;">{{ paid_count }}</p>
-                </div>
-                <div style="text-align: center;">
-                    <p style="font-size: 0.85rem; color: #6b7280; margin-bottom: 5px;">Remaining Installments</p>
-                    <p style="font-size: 1.5rem; font-weight: 800; color: #f59e0b; margin: 0;">{{ remaining_installments }}</p>
-                </div>
-            </div>
-        </div>
     </div>
 </div>
 {% endblock %}

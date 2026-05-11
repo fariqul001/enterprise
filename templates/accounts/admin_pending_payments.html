@@ -48,10 +48,10 @@
                                     <small style="color: #6b7280;">{{ payment.investor.email }}</small>
                                 </td>
                                 <td style="padding: 20px;">
-                                    <div style="color: #1e3a8a; font-weight: 500;">{{ payment.installment.investment.fund.name }}</div>
+                                    <div style="color: #1e3a8a; font-weight: 500;">{{ payment.investment.fund.name }}</div>
                                 </td>
                                 <td style="padding: 20px;">
-                                    <div style="font-size: 1.1rem; font-weight: 700; color: #10b981;">${{ payment.amount|floatformat:2 }}</div>
+                                    <div style="font-size: 1.1rem; font-weight: 700; color: #10b981;">{{ payment.amount }}</div>
                                 </td>
                                 <td style="padding: 20px;">
                                     {% if payment.bank_slip %}

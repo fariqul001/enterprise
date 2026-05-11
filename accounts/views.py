@@ -1,3 +1,4 @@
+from operator import inv
 import os
 from io import BytesIO
 import csv
@@ -14,7 +15,7 @@ from django.db import models
 from django.utils import timezone
 import json
 from .forms import CustomUserCreationForm, InvestorKYCForm, ProfileForm, FundForm, InvestmentForm, PaymentForm
-from .models import CustomUser, InvestorKYC, InvestorAgreement, Fund, Investment, Installment, Payment, Transaction
+from .models import CustomUser, InvestorKYC, InvestorAgreement, Fund, Investment, Payment, Transaction
 from fpdf import FPDF
 from django.core.mail import EmailMessage
 from .sslcommerz import initiate_payment
@@ -138,8 +139,6 @@ def admin_dashboard(request):
     funds = Fund.objects.all()
     fund_labels = [fund.name for fund in funds]
     fund_data = [float(fund.invested_amount) for fund in funds]
-    total_capacity = Fund.objects.aggregate(total=models.Sum('total_capacity'))['total'] or 0
-    total_remaining = sum(max(float(fund.total_capacity - fund.invested_amount), 0) for fund in funds)
 
     context = {
         'active_users': InvestorKYC.objects.count(),
@@ -150,8 +149,6 @@ def admin_dashboard(request):
         'pending_payments': Payment.objects.filter(status='pending').count(),
         'pending_investors': total_investors,
         'total_money_raised': total_money_raised,
-        'total_capacity': total_capacity,
-        'total_remaining': total_remaining,
         'kyc_requests': pending_kyc.select_related('user'),
         'recent_activities': [
             {'title': 'Platform audit completed', 'time': '1 hour ago'},
@@ -454,7 +451,7 @@ def invest_in_fund(request, pk):
             if investment.amount < fund.minimum_investment:
                 messages.error(
                     request,
-                    f'Minimum investment for this fund is ${fund.minimum_investment}'
+                    f'Minimum investment for this fund is {fund.minimum_investment}'
                 )
                 return redirect('accounts:invest_in_fund', pk=fund.pk)
 
@@ -485,15 +482,11 @@ def active_investments(request):
 
 @login_required
 def payment(request):
-    installments = Installment.objects.filter(investment__investor=request.user, paid=False)
+    # Simplified: no installments, so no pending payments here
+    installments = []
     if request.method == 'POST':
-        installment_id = request.POST.get('installment_id')
-        installment = get_object_or_404(Installment, id=installment_id, investment__investor=request.user)
-        installment.paid = True
-        installment.paid_date = timezone.now().date()
-        installment.save()
-        Payment.objects.create(investor=request.user, installment=installment, amount=installment.amount, status='completed')
-        messages.success(request, f'Payment of ${installment.amount} completed successfully!')
+        # This shouldn't be reached in the new flow
+        messages.error(request, 'Payment method not available.')
         return redirect('accounts:payment')
     return render(request, 'accounts/payment.html', {'installments': installments})
 
@@ -590,11 +583,9 @@ def build_admin_report_context(period='this_month'):
     funds = Fund.objects.all().order_by('-created_at')
     fund_summary = []
     for fund in funds:
-        remaining = max(float(fund.total_capacity - fund.invested_amount), 0)
         fund_summary.append({
             'name': fund.name,
             'invested': float(fund.invested_amount),
-            'remaining': remaining,
             'status': fund.status,
             'badge_color': 'success' if fund.status == Fund.STATUS_ACTIVE else 'secondary',
         })
@@ -621,8 +612,6 @@ def build_admin_report_context(period='this_month'):
         'selected_period_label': selected_period_label,
         'fund_summary': fund_summary,
         'total_invested': sum(float(fund.invested_amount) for fund in funds),
-        'total_capacity': sum(float(fund.total_capacity) for fund in funds),
-        'total_remaining': sum(item['remaining'] for item in fund_summary),
         'active_funds': Fund.objects.filter(status=Fund.STATUS_ACTIVE).count(),
         'total_funds': funds.count(),
         'total_investors': CustomUser.objects.filter(role='investor').count(),
@@ -657,9 +646,7 @@ def admin_reports_download(request):
         pdf.set_font('Arial', '', 12)
         pdf.cell(0, 8, f'Period: {report_data.get("selected_period_label")}', ln=True)
         pdf.ln(4)
-        pdf.cell(0, 8, f'Total Invested: ${report_data.get("total_invested"):.2f}', ln=True)
-        pdf.cell(0, 8, f'Total Capacity: ${report_data.get("total_capacity"):.2f}', ln=True)
-        pdf.cell(0, 8, f'Total Remaining: ${report_data.get("total_remaining"):.2f}', ln=True)
+        pdf.cell(0, 8, f'Total Invested: {report_data.get("total_invested"):.2f}', ln=True)
         pdf.cell(0, 8, f'Active Funds: {report_data.get("active_funds")}', ln=True)
         pdf.cell(0, 8, f'Total Investors: {report_data.get("total_investors")}', ln=True)
         pdf.ln(6)
@@ -667,7 +654,7 @@ def admin_reports_download(request):
         pdf.cell(0, 8, 'Fund Summary', ln=True)
         pdf.set_font('Arial', '', 11)
         for fund in report_data.get('fund_summary', []):
-            pdf.multi_cell(0, 7, f"{fund['name']}: Invested ${fund['invested']:.2f}, Remaining ${fund['remaining']:.2f}, Status {fund['status']}")
+            pdf.multi_cell(0, 7, f"{fund['name']}: Invested {fund['invested']:.2f}, Status {fund['status']}")
         buffer.write(pdf.output(dest='S').encode('latin-1'))
         buffer.seek(0)
         response = HttpResponse(buffer, content_type='application/pdf')
@@ -678,15 +665,13 @@ def admin_reports_download(request):
     writer = csv.writer(csv_buffer)
     writer.writerow(['Report Type', report_data.get('selected_period_label')])
     writer.writerow([])
-    writer.writerow(['Total Invested', f'${report_data.get("total_invested"):.2f}'])
-    writer.writerow(['Total Capacity', f'${report_data.get("total_capacity"):.2f}'])
-    writer.writerow(['Total Remaining', f'${report_data.get("total_remaining"):.2f}'])
+    writer.writerow(['Total Invested', f'{report_data.get("total_invested"):.2f}'])
     writer.writerow(['Active Funds', report_data.get('active_funds')])
     writer.writerow(['Total Investors', report_data.get('total_investors')])
     writer.writerow([])
-    writer.writerow(['Fund Name', 'Invested', 'Remaining', 'Status'])
+    writer.writerow(['Fund Name', 'Invested', 'Status'])
     for fund in report_data.get('fund_summary', []):
-        writer.writerow([fund['name'], f"${fund['invested']:.2f}", f"${fund['remaining']:.2f}", fund['status']])
+        writer.writerow([fund['name'], f"{fund['invested']:.2f}", fund['status']])
     writer.writerow([])
     writer.writerow(['Investor Username', 'Email', 'Joined'])
     for member in report_data.get('joined_members', []):
@@ -771,24 +756,15 @@ def submit_monthly_payment(request, investment_id):
             messages.error(request, 'Invalid amount.')
             return redirect('accounts:investor_pending_payments')
         
-        # Get or create pending installment
-        pending_installment = Installment.objects.filter(
+        # Create payment record
+        payment = Payment.objects.create(
+            investor=request.user,
             investment=investment,
-            paid=False
-        ).first()
-        
-        if pending_installment:
-            # Create or update payment record
-            payment = Payment.objects.create(
-                investor=request.user,
-                installment=pending_installment,
-                amount=amount,
-                bank_slip=bank_slip,
-                status='pending'
-            )
-            messages.success(request, 'Monthly payment submitted successfully. Admin will review and approve it.')
-        else:
-            messages.error(request, 'No pending installments for this investment.')
+            amount=amount,
+            bank_slip=bank_slip,
+            status='pending'
+        )
+        messages.success(request, 'Monthly payment submitted successfully. Admin will review and approve it.')
         
         return redirect('accounts:investor_pending_payments')
     
@@ -803,7 +779,7 @@ def admin_pending_payments(request):
     
     # Get all pending payments
     pending_payments = Payment.objects.filter(status='pending').select_related(
-        'investor', 'installment__investment__fund'
+        'investor', 'investment__fund'
     ).order_by('-payment_date')
     
     # Handle approval/rejection
@@ -816,19 +792,24 @@ def admin_pending_payments(request):
         
         if action == 'approve':
             payment.status = 'approved'
-            payment.installment.paid = True
-            payment.installment.paid_date = timezone.now().date()
-            payment.installment.save()
             payment.reviewed_at = timezone.now()
             payment.admin_note = admin_note or 'Payment approved by admin.'
             payment.save()
+            
+            # Add the payment amount to the investment amount
+            payment.investment.amount += payment.amount
+            payment.investment.save()
+            
+            # Update fund invested_amount
+            payment.investment.fund.invested_amount += payment.amount
+            payment.investment.fund.save()
             
             # Send approval email to investor
             subject = "Monthly Payment Approved"
             message = f"""
 Dear {payment.investor.username},
 
-Your monthly installment payment of {payment.amount} for {payment.installment.investment.fund.name} has been approved.
+Your monthly installment payment of {payment.amount} for {payment.investment.fund.name} has been approved.
 
 Your account has been updated accordingly.
 
@@ -853,7 +834,7 @@ Enterprise Fund & Investment Management Team
             message = f"""
 Dear {payment.investor.username},
 
-Your monthly installment payment submission for {payment.installment.investment.fund.name} could not be approved.
+Your monthly installment payment submission for {payment.investment.fund.name} could not be approved.
 
 Reason: {payment.admin_note}
 
@@ -888,51 +869,36 @@ def investment_report_detail(request, investment_id):
         investor=request.user
     )
 
-    installments = Installment.objects.filter(
+    payments = Payment.objects.filter(
         investment=investment
-    ).order_by('due_date')
+    ).order_by('payment_date')
 
     payment_history = []
-    total_paid = 0
-    paid_count = 0
+    total_paid = float(investment.amount)
 
-    # Installments
-    for installment in installments:
-        if installment.paid:
-            paid_count += 1
-            total_paid += float(installment.amount)
-
-            payment_history.append({
-                'type': 'Monthly Installment',
-                'amount': installment.amount,
-                'date': installment.paid_date,
-                'status': 'Completed'
-            })
-
-    # Down payment
-    payment_history.insert(0, {
-        'type': 'Down Payment',
+    # Initial investment
+    payment_history.append({
+        'type': 'Initial Investment',
         'amount': investment.amount,
         'date': investment.paid_at or investment.invested_date,
         'status': 'Completed' if investment.status == 'active' else investment.status
     })
 
-    total_paid += float(investment.amount)
-
-    total_due = float(investment.amount) + sum(
-        float(i.amount) for i in installments
-    )
-
-    remaining_installments = len(installments) - paid_count
+    # Additional payments
+    for payment in payments:
+        payment_history.append({
+            'type': 'Additional Payment',
+            'amount': payment.amount,
+            'date': payment.payment_date,
+            'status': payment.status
+        })
+        if payment.status == 'approved':
+            total_paid += float(payment.amount)
 
     context = {
         'investment': investment,
         'payment_history': payment_history,
-        'total_due': total_due,
         'total_paid': total_paid,
-        'paid_count': paid_count,
-        'installments': installments,
-        'remaining_installments': remaining_installments,
     }
 
     return render(request, 'accounts/investment_report_detail.html', context)
@@ -961,17 +927,12 @@ def admin_investor_funds_overview(request):
         total_amount_paid = investments.aggregate(total=models.Sum('amount'))['total'] or 0
         
         # Count transactions
-        total_transactions = Installment.objects.filter(
-            investment__investor=investor, paid=True
+        total_transactions = Payment.objects.filter(
+            investment__investor=investor
         ).count() + investments.filter(status='active').count()
         
-        # Check current monthly installment status
-        pending_monthly = Installment.objects.filter(
-            investment__investor=investor,
-            investment__status='active',
-            paid=False,
-            due_date__lte=timezone.now().date()
-        ).exists()
+        # Check current monthly installment status (simplified - no pending logic)
+        pending_monthly = False
         
         investor_cards.append({
             'user': investor,
@@ -1006,28 +967,22 @@ def admin_investor_detail(request, investor_id):
     # Prepare investment details
     investment_details = []
     for inv in active_investments:
-        installments = Installment.objects.filter(investment=inv)
+        payments = Payment.objects.filter(investment=inv)
 
-        paid_installments = installments.filter(paid=True).count()
-        total_installments = installments.count()
+        paid_payments = payments.filter(status='approved').count()
+        total_payments = payments.count()
 
-        total_amount = installments.aggregate(
-            total=Sum('amount')
-        )['total'] or 0
+        approved_total = payments.filter(status='approved').aggregate(total=Sum('amount'))['total'] or 0
 
-        total_paid = Installment.objects.filter(
-            investment=inv,
-            paid=True
-        ).aggregate(
-            total=Sum('amount')
-        )['total'] or 0
+        total_amount = inv.amount + approved_total
+        total_paid = total_amount  # Since approved payments are added to investment.amount
 
         investment_details.append({
             'investment': inv,
-            'paid_installments': paid_installments,
-            'total_installments': total_installments,
-            'total_amount': inv.amount + total_amount,
-            'total_paid': inv.amount + total_paid,
+            'paid_installments': paid_payments,  # Using payments instead
+            'total_installments': total_payments,
+            'total_amount': total_amount,
+            'total_paid': total_paid,
         })
     
     context = {
@@ -1066,16 +1021,6 @@ def payment_success(request):
             investment.status = "active"
             investment.transaction_id = tran_id
             investment.save()
-            monthly_amount = investment.amount / 12
-
-            for i in range(1, 13):
-                Installment.objects.create(
-                     investment=investment,
-                     amount=monthly_amount,
-                     due_date=timezone.now().date() + timedelta(days=30 * i),
-                     paid=False
-                 )
-            
 
             fund = investment.fund
             fund.invested_amount += investment.amount

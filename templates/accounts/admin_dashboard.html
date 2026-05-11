@@ -149,7 +149,7 @@
                 <div class="card-body">
                     <div class="row text-center">
                         <div class="col-6">
-                            <h4>${{ total_money_raised|floatformat:2 }}</h4>
+                            <h4>{{ total_money_raised }}</h4>
                             <p>Total Money Raised</p>
                         </div>
                         <div class="col-6">
@@ -254,7 +254,6 @@
                                         <tr>
                                             <th>Fund</th>
                                             <th>Status</th>
-                                            <th>Capacity</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -262,7 +261,6 @@
                                             <tr>
                                                 <td>{{ fund.name }}</td>
                                                 <td><span class="tag-status tag-approved">{{ fund.status }}</span></td>
-                                                <td>${{ fund.total_capacity|floatformat:2 }}</td>
                                             </tr>
                                         {% endfor %}
                                     </tbody>

@@ -22,29 +22,12 @@
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                                 <div>
                                     <p style="font-size: 0.85rem; color: #6b7280; margin-bottom: 5px;">Min Investment</p>
-                                    <p style="font-size: 1.1rem; font-weight: 700; color: #1e3a8a; margin: 0;">${{ item.fund.minimum_investment|floatformat:2 }}</p>
+                                    <p style="font-size: 1.1rem; font-weight: 700; color: #1e3a8a; margin: 0;">{{ item.fund.minimum_investment }}</p>
                                 </div>
                                 <div>
                                     <p style="font-size: 0.85rem; color: #6b7280; margin-bottom: 5px;">Expected Return</p>
                                     <p style="font-size: 1.1rem; font-weight: 700; color: #10b981; margin: 0;">{{ item.fund.expected_return }}</p>
                                 </div>
-                                <div>
-                                    <p style="font-size: 0.85rem; color: #6b7280; margin-bottom: 5px;">Duration</p>
-                                    <p style="font-size: 1rem; font-weight: 600; color: #1e3a8a; margin: 0;">{{ item.fund.duration }}</p>
-                                </div>
-                                <div>
-                                    <p style="font-size: 0.85rem; color: #6b7280; margin-bottom: 5px;">Capacity</p>
-                                    <p style="font-size: 1rem; font-weight: 600; color: #1e3a8a; margin: 0;">${{ item.fund.total_capacity|floatformat:0 }}</p>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div style="margin-top: 15px;">
-                            <p style="font-size: 0.9rem; color: #6b7280; margin-bottom: 10px;">
-                                <strong>Capacity Used:</strong> ${{ item.fund.invested_amount|floatformat:2 }} / ${{ item.fund.total_capacity|floatformat:2 }}
-                            </p>
-                            <div style="background: #e5e7eb; height: 6px; border-radius: 3px; overflow: hidden;">
-                                <div style="background: linear-gradient(90deg, #0284c7, #10b981); height: 100%; width: {% widthratio item.fund.invested_amount item.fund.total_capacity 100 %}%;"></div>
                             </div>
                         </div>
                         

@@ -151,7 +151,7 @@
                                     {% for investment in existing_investments %}
                                         <tr>
                                             <td>{{ investment.fund.name }}</td>
-                                            <td>${{ investment.amount|floatformat:2 }}</td>
+                                            <td>{{ investment.amount }}</td>
                                             <td>{{ investment.invested_date|date:'M d, Y' }}</td>
                                             <td><span class="badge bg-success">{{ investment.status }}</span></td>
                                         </tr>

@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import CustomUser, InvestorKYC, InvestorAgreement, Fund, Investment, Installment, Payment
+from .models import CustomUser, InvestorKYC, InvestorAgreement, Fund, Investment, Payment
 
 @admin.register(CustomUser)
 class CustomUserAdmin(UserAdmin):
@@ -23,7 +23,7 @@ class InvestorAgreementAdmin(admin.ModelAdmin):
 
 @admin.register(Fund)
 class FundAdmin(admin.ModelAdmin):
-    list_display = ('name', 'minimum_investment', 'total_capacity', 'invested_amount')
+    list_display = ('name', 'minimum_investment', 'invested_amount')
     search_fields = ('name',)
 
 @admin.register(Investment)
@@ -31,12 +31,6 @@ class InvestmentAdmin(admin.ModelAdmin):
     list_display = ('investor', 'fund', 'amount', 'invested_date', 'status')
     list_filter = ('fund', 'status', 'invested_date')
     search_fields = ('investor__username',)
-
-@admin.register(Installment)
-class InstallmentAdmin(admin.ModelAdmin):
-    list_display = ('investment', 'amount', 'due_date', 'paid', 'paid_date')
-    list_filter = ('paid', 'due_date')
-    search_fields = ('investment__investor__username',)
 
 @admin.register(Payment)
 class PaymentAdmin(admin.ModelAdmin):

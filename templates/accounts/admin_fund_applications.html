@@ -28,7 +28,7 @@
                     <tr>
                         <td>{{ application.investor.username }}</td>
                         <td>{{ application.fund.name }}</td>
-                        <td>${{ application.amount }}</td>
+                        <td>{{ application.amount }}</td>
                         <td>{{ application.invested_date|date:'M d, Y' }}</td>
                         <td><span class="badge bg-success">{{ application.status|capfirst }}</span></td>
                     </tr>

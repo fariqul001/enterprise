@@ -74,8 +74,6 @@ class Fund(models.Model):
     description = models.TextField()
     minimum_investment = models.DecimalField(max_digits=10, decimal_places=2)
     expected_return = models.CharField(max_length=100)
-    duration = models.CharField(max_length=100)
-    total_capacity = models.DecimalField(max_digits=15, decimal_places=2)
     invested_amount = models.DecimalField(max_digits=15, decimal_places=2, default=0)
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default=STATUS_ACTIVE)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -141,17 +139,7 @@ class Investment(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.investor.username} - {self.fund.name} (${self.amount}) [{self.status}]"
-
-class Installment(models.Model):
-    investment = models.ForeignKey(Investment, on_delete=models.CASCADE, related_name='installments')
-    amount = models.DecimalField(max_digits=15, decimal_places=2)
-    due_date = models.DateField()
-    paid = models.BooleanField(default=False)
-    paid_date = models.DateField(null=True, blank=True)
-
-    def __str__(self):
-        return f"Installment for {self.investment} - Due {self.due_date}"
+        return f"{self.investor.username} - {self.fund.name} ({self.amount}) [{self.status}]"
 
 class Payment(models.Model):
     STATUS_CHOICES = [
@@ -162,7 +150,7 @@ class Payment(models.Model):
     ]
     
     investor = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='payments')
-    installment = models.ForeignKey(Installment, on_delete=models.CASCADE, related_name='payment')
+    investment = models.ForeignKey(Investment, on_delete=models.CASCADE, related_name='payments', null=True, blank=True)
     amount = models.DecimalField(max_digits=15, decimal_places=2)
     bank_slip = models.ImageField(upload_to='payment_slips/', null=True, blank=True)
     payment_date = models.DateTimeField(auto_now_add=True)

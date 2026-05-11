@@ -41,10 +41,10 @@
                     <td>{{ item.user.username }}</td>
                     <td>{{ item.user.email }}</td>
                     <td class="text-success">
-                        ${{ item.total_invested }}
+                        {{ item.total_invested }}
                     </td>
                     <td class="text-primary">
-                        ${{ item.total_payments }}
+                        {{ item.total_payments }}
                     </td>
                     <td>{{ item.total_funds }}</td>
                     <td>{{ item.user.date_joined|date:"M d, Y" }}</td>

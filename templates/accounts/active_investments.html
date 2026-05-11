@@ -5,35 +5,28 @@
 {% block content %}
 <div class="container my-5">
     <h2 class="mb-4"><i class="fas fa-chart-line me-2"></i>My Active Investments</h2>
-    <div class="table-responsive">
-        <table class="table table-hover">
-            <thead class="table-light">
-                <tr>
-                    <th>Fund Name</th>
-                    <th>Investment Amount</th>
-                    <th>Invested Date</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for investment in investments %}
-                    <tr>
-                        <td>{{ investment.fund.name }}</td>
-                        <td>${{ investment.amount }}</td>
-                        <td>{{ investment.invested_date|date:'M d, Y' }}</td>
-                        <td><span class="badge bg-success">{{ investment.status }}</span></td>
-                        <a href="{% url 'accounts:investment_report_detail' investment.id %}" 
-   class="btn btn-primary">
-    View Report
-</a>
-                    </tr>
-                {% empty %}
-                    <tr>
-                        <td colspan="4" class="text-center">No active investments yet. <a href="{% url 'accounts:fund_list' %}">Explore funds</a></td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <div class="row">
+        {% for investment in investments %}
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title text-primary">{{ investment.fund.name }}</h5>
+                        <p class="card-text">
+                            <strong>Investment Amount:</strong> {{ investment.amount }}<br>
+                            <strong>Invested Date:</strong> {{ investment.invested_date|date:'M d, Y' }}<br>
+                            <strong>Status:</strong> <span class="badge bg-success">{{ investment.status }}</span>
+                        </p>
+                        <a href="{% url 'accounts:investment_report_detail' investment.id %}" class="btn btn-primary">View Full Report</a>
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <div class="col-12">
+                <div class="alert alert-info text-center">
+                    No active investments yet. <a href="{% url 'accounts:fund_list' %}">Explore funds</a>
+                </div>
+            </div>
+        {% endfor %}
     </div>
 </div>
 {% endblock %}

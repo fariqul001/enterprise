@@ -61,8 +61,6 @@ class FundForm(forms.ModelForm):
             'description',
             'minimum_investment',
             'expected_return',
-            'duration',
-            'total_capacity',
             'status'
         ]
         widgets = {
@@ -70,8 +68,6 @@ class FundForm(forms.ModelForm):
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'minimum_investment': forms.NumberInput(attrs={'class': 'form-control'}),
             'expected_return': forms.TextInput(attrs={'class': 'form-control'}),
-            'duration': forms.TextInput(attrs={'class': 'form-control'}),
-            'total_capacity': forms.NumberInput(attrs={'class': 'form-control'}),
             'status': forms.Select(attrs={'class': 'form-select'}),
         }
 
