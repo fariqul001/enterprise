@@ -62,11 +62,12 @@ def user_dashboard(request):
 
     kyc = getattr(request.user, 'kyc', None)
     agreement = getattr(kyc, 'agreement', None) if kyc else None
-
+    user = request.user
     # Dynamic data for dashboard
     total_invested = Investment.objects.filter(investor=request.user).aggregate(total=models.Sum('amount'))['total'] or 0
     new_funds = Fund.objects.order_by('-created_at')[:5]
     existing_investments = Investment.objects.filter(investor=request.user).select_related('fund')
+    total_funds = Investment.objects.filter(investor=user).count()
 
     # Data for pie chart: investments by fund
     investment_data = []
@@ -83,6 +84,8 @@ def user_dashboard(request):
         'existing_investments': existing_investments,
         'investment_labels_json': json.dumps(labels),
         'investment_data_json': json.dumps(investment_data),
+        'total_funds': total_funds,
+        
     })
 
 @login_required
