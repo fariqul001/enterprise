@@ -8,10 +8,18 @@
     <div class="row">
         {% for item in funds_with_status %}
             <div class="col-md-6 mb-4">
-                <div class="card shadow-sm" style="border-top: 4px solid {% if item.is_enrolled %}#10b981{% else %}#0284c7{% endif %}; height: 100%; position: relative;">
+                <div class="card shadow-sm" style="border-top: 4px solid {% if item.is_enrolled %}#10b981{% elif item.status == 'failed' %}#ef4444{% else %}#0284c7{% endif %}; height: 100%; position: relative;">
                     {% if item.is_enrolled %}
                         <div style="position: absolute; top: 15px; right: 15px; background: #10b981; color: white; padding: 8px 15px; border-radius: 20px; font-size: 0.85rem; font-weight: 600;">
                             <i class="fas fa-check me-1"></i> Enrolled
+                        </div>
+                    {% elif item.status == 'pending' %}
+                        <div style="position: absolute; top: 15px; right: 15px; background: #f59e0b; color: white; padding: 8px 15px; border-radius: 20px; font-size: 0.85rem; font-weight: 600;">
+                            <i class="fas fa-clock me-1"></i> Pending Review
+                        </div>
+                    {% elif item.status == 'failed' %}
+                        <div style="position: absolute; top: 15px; right: 15px; background: #ef4444; color: white; padding: 8px 15px; border-radius: 20px; font-size: 0.85rem; font-weight: 600;">
+                            <i class="fas fa-times me-1"></i> Rejected
                         </div>
                     {% endif %}
                     <div class="card-body">
@@ -33,11 +41,32 @@
                         
                         {% if item.is_enrolled %}
                             <div style="margin-top: 20px;">
-                                <p style="color: #6b7280; font-size: 0.9rem; margin-bottom: 10px;">
-                                    <i class="fas fa-info-circle" style="color: #10b981;"></i> You are already enrolled in this fund
+                                {% if item.status == 'active' %}
+                                    <p style="color: #10b981; font-size: 0.9rem; margin-bottom: 10px;">
+                                        <i class="fas fa-check-circle"></i> Your subscription is active
+                                    </p>
+                                    <a href="{% url 'accounts:investor_pending_payments' %}" class="btn btn-sm w-100" style="background-color: #10b981; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: 600;">
+                                        <i class="fas fa-wallet me-1"></i> Make Monthly Payment
+                                    </a>
+                                {% elif item.status == 'pending' %}
+                                    <p style="color: #f59e0b; font-size: 0.9rem; margin-bottom: 10px;">
+                                        <i class="fas fa-clock"></i> Your subscription is pending admin review
+                                    </p>
+                                    <button class="btn btn-sm w-100" disabled style="background-color: #d1d5db; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: 600;">
+                                        <i class="fas fa-lock me-1"></i> Awaiting Approval
+                                    </button>
+                                {% endif %}
+                            </div>
+                        {% elif item.status == 'failed' %}
+                            <div style="margin-top: 20px;">
+                                <p style="color: #ef4444; font-size: 0.9rem; margin-bottom: 10px;">
+                                    <i class="fas fa-info-circle"></i> Your previous subscription request was rejected
                                 </p>
-                                <a href="{% url 'accounts:investor_pending_payments' %}" class="btn btn-sm w-100" style="background-color: #10b981; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: 600;">
-                                    <i class="fas fa-wallet me-1"></i> Make Monthly Payment
+                                <p style="color: #6b7280; font-size: 0.85rem; margin-bottom: 15px;">
+                                    You can submit a new subscription request again
+                                </p>
+                                <a href="{% url 'accounts:invest_in_fund' item.fund.pk %}" class="btn btn-sm w-100" style="background-color: #0284c7; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: 600;">
+                                    <i class="fas fa-plus me-1"></i> Submit Again
                                 </a>
                             </div>
                         {% else %}

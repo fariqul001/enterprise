@@ -63,11 +63,11 @@ def user_dashboard(request):
     kyc = getattr(request.user, 'kyc', None)
     agreement = getattr(kyc, 'agreement', None) if kyc else None
     user = request.user
-    # Dynamic data for dashboard
-    total_invested = Investment.objects.filter(investor=request.user).aggregate(total=models.Sum('amount'))['total'] or 0
+    # Dynamic data for dashboard - only count ACTIVE investments
+    total_invested = Investment.objects.filter(investor=request.user, status=Investment.STATUS_ACTIVE).aggregate(total=models.Sum('amount'))['total'] or 0
     new_funds = Fund.objects.order_by('-created_at')[:5]
-    existing_investments = Investment.objects.filter(investor=request.user).select_related('fund')
-    total_funds = Investment.objects.filter(investor=user).count()
+    existing_investments = Investment.objects.filter(investor=request.user, status=Investment.STATUS_ACTIVE).select_related('fund')
+    total_funds = Investment.objects.filter(investor=user, status=Investment.STATUS_ACTIVE).count()
 
     # Data for pie chart: investments by fund
     investment_data = []
@@ -513,10 +513,11 @@ def profile(request):
         form = ProfileForm(instance=user)
 
     total_invested = Investment.objects.filter(
-        investor=user
+        investor=user,
+        status=Investment.STATUS_ACTIVE
     ).aggregate(total=models.Sum('amount'))['total'] or 0
 
-    total_funds = Investment.objects.filter(investor=user).count()
+    total_funds = Investment.objects.filter(investor=user, status=Investment.STATUS_ACTIVE).count()
 
     total_payments = Payment.objects.filter(
         investor=user,
@@ -537,16 +538,28 @@ def fund_list(request):
     # Only show active funds
     funds = Fund.objects.filter(status=Fund.STATUS_ACTIVE)
     
-    # Get user's existing investments
-    user_investments = Investment.objects.filter(investor=request.user).values_list('fund_id', flat=True)
-    
-    # Add enrollment status to each fund
+    # Add enrollment status and investment details to each fund
     funds_with_status = []
     for fund in funds:
-        funds_with_status.append({
+        # Get the MOST RECENT investment (not the first) for this investor and fund
+        investment = Investment.objects.filter(
+            investor=request.user, 
+            fund=fund
+        ).order_by('-invested_date').first()
+        
+        fund_data = {
             'fund': fund,
-            'is_enrolled': fund.id in user_investments
-        })
+            'investment': investment,
+            'is_enrolled': False,
+            'status': None,
+        }
+        
+        if investment:
+            fund_data['status'] = investment.status
+            if investment.status in [Investment.STATUS_ACTIVE, Investment.STATUS_PENDING]:
+                fund_data['is_enrolled'] = True
+        
+        funds_with_status.append(fund_data)
     
     return render(request, 'accounts/fund_list.html', {'funds_with_status': funds_with_status})
 
@@ -562,8 +575,12 @@ def invest_in_fund(request, pk):
         messages.error(request, 'This fund is no longer accepting investments.')
         return redirect('accounts:fund_list')
     
-    # Check if user already invested in this fund
-    existing_investment = Investment.objects.filter(investor=request.user, fund=fund).exists()
+    # Check if user already has a pending or active investment in this fund
+    existing_investment = Investment.objects.filter(
+        investor=request.user, 
+        fund=fund,
+        status__in=[Investment.STATUS_PENDING, Investment.STATUS_ACTIVE]
+    ).exists()
     if existing_investment:
         messages.warning(request, 'You are already enrolled in this fund. You can make monthly payments instead.')
         return redirect('accounts:fund_list')
@@ -612,7 +629,8 @@ def admin_investors(request):
 
     for investor in investors:
         total_invested = Investment.objects.filter(
-            investor=investor
+            investor=investor,
+            status=Investment.STATUS_ACTIVE
         ).aggregate(total=models.Sum('amount'))['total'] or 0
 
         total_payments = Payment.objects.filter(
@@ -621,7 +639,8 @@ def admin_investors(request):
         ).aggregate(total=models.Sum('amount'))['total'] or 0
 
         total_funds = Investment.objects.filter(
-            investor=investor
+            investor=investor,
+            status=Investment.STATUS_ACTIVE
         ).count()
 
         investor_data.append({
@@ -660,16 +679,35 @@ def admin_delete_fund(request, pk):
         return HttpResponseForbidden('Access denied')
     fund = get_object_or_404(Fund, pk=pk)
     if request.method == 'POST':
-        fund.delete()
-        messages.success(request, f'Fund "{fund.name}" was deleted successfully.')
+        # Check if there are any active investments in this fund
+        active_investments = Investment.objects.filter(
+            fund=fund,
+            status__in=[Investment.STATUS_ACTIVE, Investment.STATUS_PENDING]
+        ).count()
+        
+        if active_investments > 0:
+            messages.error(
+                request, 
+                f'Cannot delete fund "{fund.name}". There are {active_investments} active/pending investment(s) in this fund. '
+                'Please contact investors or reject pending requests first.'
+            )
+        else:
+            fund.delete()
+            messages.success(request, f'Fund "{fund.name}" was deleted successfully.')
     return redirect('accounts:admin_funds')
 
 def build_admin_report_context(period='this_month'):
     now = timezone.now()
     selected_period_label = 'This Month'
     members = CustomUser.objects.filter(role='investor')
+    start = None
+    end = None
 
-    if period == 'previous_month':
+    if period == 'last_15_days':
+        start = now - timedelta(days=15)
+        end = now
+        selected_period_label = 'Last 15 Days'
+    elif period == 'previous_month':
         first_of_this_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         end = first_of_this_month - timedelta(seconds=1)
         start = end.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
@@ -685,20 +723,78 @@ def build_admin_report_context(period='this_month'):
     else:
         start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         end = now
+        selected_period_label = 'This Month'
 
+    # Filter members by period
     if start is not None:
         members = members.filter(date_joined__gte=start, date_joined__lte=end)
 
-    funds = Fund.objects.all().order_by('-created_at')
+    # Calculate period-specific investment data
+    if start is not None and end is not None:
+        period_investments = Investment.objects.filter(
+            status=Investment.STATUS_ACTIVE,
+            invested_date__gte=start,
+            invested_date__lte=end
+        )
+    else:
+        period_investments = Investment.objects.filter(
+            status=Investment.STATUS_ACTIVE
+        )
+
+    # Get all funds and calculate period-specific amounts
+    all_funds = Fund.objects.all().order_by('-created_at')
     fund_summary = []
-    for fund in funds:
+    total_invested_period = 0
+
+    for fund in all_funds:
+        # Calculate invested amount for THIS fund in the selected period
+        if start is not None and end is not None:
+            fund_invested = period_investments.filter(fund=fund).aggregate(total=models.Sum('amount'))['total'] or 0
+            # Also count all payments approved for investments in this fund during the period
+            fund_payments = Payment.objects.filter(
+                investment__fund=fund,
+                status='approved',
+                payment_date__gte=start,
+                payment_date__lte=end
+            ).aggregate(total=models.Sum('amount'))['total'] or 0
+            fund_invested += fund_payments
+        else:
+            fund_invested = float(fund.invested_amount)
+        
+        total_invested_period += fund_invested
+        
         fund_summary.append({
             'name': fund.name,
-            'invested': float(fund.invested_amount),
+            'invested': float(fund_invested),
             'status': fund.status,
             'badge_color': 'success' if fund.status == Fund.STATUS_ACTIVE else 'secondary',
         })
 
+    # Count active funds with active investments in the period
+    if start is not None and end is not None:
+        active_funds_count = Fund.objects.filter(
+            status=Fund.STATUS_ACTIVE,
+            investments__status=Investment.STATUS_ACTIVE,
+            investments__invested_date__gte=start,
+            investments__invested_date__lte=end
+        ).distinct().count()
+        
+        # If no active investments in period, count active funds globally
+        if active_funds_count == 0:
+            active_funds_count = Fund.objects.filter(status=Fund.STATUS_ACTIVE).count()
+    else:
+        active_funds_count = Fund.objects.filter(status=Fund.STATUS_ACTIVE).count()
+
+    # Count total funds
+    total_funds_count = all_funds.count()
+
+    # Count total investors in period
+    if start is not None and end is not None:
+        total_investors_count = members.count()
+    else:
+        total_investors_count = CustomUser.objects.filter(role='investor').count()
+
+    # Generate month labels and counts for chart
     month_labels = []
     month_counts = []
     for offset in range(5, -1, -1):
@@ -720,10 +816,10 @@ def build_admin_report_context(period='this_month'):
         'selected_period': period,
         'selected_period_label': selected_period_label,
         'fund_summary': fund_summary,
-        'total_invested': sum(float(fund.invested_amount) for fund in funds),
-        'active_funds': Fund.objects.filter(status=Fund.STATUS_ACTIVE).count(),
-        'total_funds': funds.count(),
-        'total_investors': CustomUser.objects.filter(role='investor').count(),
+        'total_invested': total_invested_period,
+        'active_funds': active_funds_count,
+        'total_funds': total_funds_count,
+        'total_investors': total_investors_count,
         'members_count': members.count(),
         'joined_members': members.order_by('-date_joined')[:12],
         'month_labels_json': json.dumps(month_labels),

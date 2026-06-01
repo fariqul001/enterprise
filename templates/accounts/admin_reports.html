@@ -24,6 +24,7 @@
                 <div class="col-auto">
                     <select id="period" name="period" class="form-select">
                         <option value="this_month" {% if selected_period == 'this_month' %}selected{% endif %}>This Month</option>
+                        <option value="last_15_days" {% if selected_period == 'last_15_days' %}selected{% endif %}>Last 15 Days</option>
                         <option value="previous_month" {% if selected_period == 'previous_month' %}selected{% endif %}>Previous Month</option>
                         <option value="this_year" {% if selected_period == 'this_year' %}selected{% endif %}>This Year</option>
                         <option value="all" {% if selected_period == 'all' %}selected{% endif %}>All Time</option>
