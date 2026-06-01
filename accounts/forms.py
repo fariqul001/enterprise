@@ -59,14 +59,14 @@ class FundForm(forms.ModelForm):
         fields = [
             'name',
             'description',
-            'minimum_investment',
+            'monthly_installment',
             'expected_return',
             'status'
         ]
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'minimum_investment': forms.NumberInput(attrs={'class': 'form-control'}),
+            'monthly_installment': forms.NumberInput(attrs={'class': 'form-control'}),
             'expected_return': forms.TextInput(attrs={'class': 'form-control'}),
             'status': forms.Select(attrs={'class': 'form-select'}),
         }
@@ -74,11 +74,8 @@ class FundForm(forms.ModelForm):
 class InvestmentForm(forms.ModelForm):
     class Meta:
         model = Investment
-        fields = ('amount',)
-        widgets = {
-            
-            'amount': forms.NumberInput(attrs={'class': 'form-control'}),
-        }
+        # No fields: subscription request requires no amount input
+        fields = []
 
 class PaymentForm(forms.ModelForm):
     class Meta:

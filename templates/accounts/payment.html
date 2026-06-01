@@ -21,7 +21,7 @@
                     <tr>
                         <td>{{ installment.investment.fund.name }}</td>
                         <td>{{ installment.due_date }}</td>
-                        <td>{{ installment.amount }}</td>
+                        <td>{{ installment.amount|floatformat:0 }}</td>
                         <td><span class="badge bg-warning text-dark">Pending</span></td>
                         <td>
                             <form method="post" style="display:inline;">

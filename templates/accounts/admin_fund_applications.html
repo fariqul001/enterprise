@@ -21,6 +21,7 @@
                     <th>Amount</th>
                     <th>Date</th>
                     <th>Status</th>
+                    <th>Action</th>
                 </tr>
             </thead>
             <tbody>
@@ -28,9 +29,27 @@
                     <tr>
                         <td>{{ application.investor.username }}</td>
                         <td>{{ application.fund.name }}</td>
-                        <td>{{ application.amount }}</td>
+                        <td>{{ application.amount|floatformat:0 }}</td>
                         <td>{{ application.invested_date|date:'M d, Y' }}</td>
                         <td><span class="badge bg-success">{{ application.status|capfirst }}</span></td>
+                        <td>
+                            {% if application.status == 'pending' %}
+                                <form method="post" style="display:inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="investment_id" value="{{ application.id }}" />
+                                    <input type="hidden" name="action" value="approve" />
+                                    <button class="btn btn-sm btn-success" type="submit">Approve</button>
+                                </form>
+                                <form method="post" style="display:inline; margin-left:6px">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="investment_id" value="{{ application.id }}" />
+                                    <input type="hidden" name="action" value="reject" />
+                                    <button class="btn btn-sm btn-danger" type="submit">Reject</button>
+                                </form>
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
                     </tr>
                 {% empty %}
                     <tr>

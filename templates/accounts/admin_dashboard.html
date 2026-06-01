@@ -92,8 +92,10 @@
                         <i class="fas fa-dollar-sign me-2"></i>Manage Funds</a>
                     <a href="{% url 'accounts:admin_add_fund' %}" class="list-group-item list-group-item-action">
                         <i class="fas fa-plus-circle me-2"></i>Add New Fund</a>
+                    <a href="{% url 'accounts:admin_fund_applications' %}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-users me-2"></i>Approve Fund requests</a>
                     <a href="{% url 'accounts:admin_pending_payments' %}" class="list-group-item list-group-item-action">
-                        <i class="fas fa-dollar-sign me-2"></i>Pending Payments</a>
+                        <i class="fas fa-dollar-sign me-2"></i>Approve Pending Payments</a>
                     <a href="{% url 'accounts:admin_investor_funds_overview' %}" class="list-group-item list-group-item-action">
                         <i class="fas fa-file-invoice-dollar me-2"></i>Investor Funds Overview</a>
                     <a href="{% url 'accounts:admin_reports' %}" class="list-group-item list-group-item-action">
@@ -226,7 +228,7 @@
                                         {% for payment in payment_requests %}
                                             <tr>
                                                 <td>{{ payment.investor }}</td>
-                                                <td>{{ payment.amount }}</td>
+                                                <td>{{ payment.amount|floatformat:0 }}</td>
                                                 <td><span class="tag-status tag-awaiting">{{ payment.status }}</span></td>
                                             </tr>
                                         {% empty %}

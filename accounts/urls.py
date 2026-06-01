@@ -19,6 +19,7 @@ urlpatterns = [
     path('kyc/review/<int:pk>/', views.kyc_review_detail, name='kyc_review_detail'),
     path('agreements/', views.agreement_list, name='agreement_list'),
     path('agreements/<int:pk>/download/', views.agreement_download, name='agreement_download'),
+    path('fund-agreements/<int:pk>/download/', views.fund_agreement_download, name='fund_agreement_download'),
     path('admin-dashboard/', views.admin_dashboard, name='admin_dashboard'),
     path('admin/', views.admin_dashboard, name='admin_dashboard_alias'),
     path('admin/investors/', views.admin_investors, name='admin_investors'),

@@ -41,7 +41,7 @@
                     <td>{{ item.user.username }}</td>
                     <td>{{ item.user.email }}</td>
                     <td class="text-success">
-                        {{ item.total_invested }}
+                        {{ item.total_invested|floatformat:0 }}
                     </td>
                     <td class="text-primary">
                         {{ item.total_payments }}

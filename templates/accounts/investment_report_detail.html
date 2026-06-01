@@ -45,8 +45,9 @@
         <!-- Summary Cards -->
         <div class="col-lg-4">
             <div style="background: white; padding: 25px; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.08); margin-bottom: 20px; border-top: 4px solid #10b981;">
-                <p style="font-size: 0.85rem; color: #6b7280; margin-bottom: 8px;">Total Invested</p>
-                <p style="font-size: 2rem; font-weight: 800; color: #10b981; margin: 0;">{{ total_paid }}</p>
+                <p style="font-size: 0.85rem; color: #6b7280; margin-bottom: 8px;">Total Paid</p>
+                <p style="font-size: 2rem; font-weight: 800; color: #10b981; margin: 0;">{{ total_paid|floatformat:0 }}</p>
+                <p style="font-size: 0.9rem; color: #6b7280; margin-top: 12px;">Installments Paid: <strong>{{ installments_paid }}</strong></p>
             </div>
         </div>
     </div>
@@ -61,7 +62,6 @@
             <table style="width: 100%; border-collapse: collapse;">
                 <thead>
                     <tr style="background-color: #f8f9fa; border-bottom: 2px solid #e5e7eb;">
-                        <th style="padding: 15px; text-align: left; color: #1e3a8a; font-weight: 700; font-size: 0.95rem;">Payment Type</th>
                         <th style="padding: 15px; text-align: left; color: #1e3a8a; font-weight: 700; font-size: 0.95rem;">Amount</th>
                         <th style="padding: 15px; text-align: left; color: #1e3a8a; font-weight: 700; font-size: 0.95rem;">Date</th>
                         <th style="padding: 15px; text-align: left; color: #1e3a8a; font-weight: 700; font-size: 0.95rem;">Status</th>
@@ -71,26 +71,13 @@
                     {% for payment in payment_history %}
                         <tr style="border-bottom: 1px solid #e5e7eb;">
                             <td style="padding: 15px;">
-                                <div style="font-weight: 600; color: #1e3a8a;">
-                                    <i class="fas fa-{% if payment.type == 'Down Payment' %}money-bill{% else %}calendar-day{% endif %} me-2"></i>
-                                    {{ payment.type }}
-                                </div>
-                            </td>
-                            <td style="padding: 15px;">
-                                <span style="font-size: 1.1rem; font-weight: 700; color: #0284c7;">{{ payment.amount }}</span>
+                                <span style="font-size: 1.1rem; font-weight: 700; color: #0284c7;">{{ payment.amount|floatformat:0 }}</span>
                             </td>
                             <td style="padding: 15px;">
                                 <small style="color: #6b7280;">{{ payment.date|date:"M d, Y" }}</small>
                             </td>
                             <td style="padding: 15px;">
-                                <span style="display: inline-block; padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; 
-                                {% if payment.status == 'Completed' or payment.status == 'approved' %}
-                                    background-color: #d1fae5; color: #065f46;
-                                {% elif payment.status == 'pending' %}
-                                    background-color: #fef3c7; color: #92400e;
-                                {% else %}
-                                    background-color: #fee2e2; color: #991b1b;
-                                {% endif %}">
+                                <span class="payment-status {% if payment.status == 'Completed' or payment.status == 'approved' %}status-approved{% elif payment.status == 'pending' %}status-pending{% else %}status-rejected{% endif %}">
                                     {{ payment.status|title }}
                                 </span>
                             </td>

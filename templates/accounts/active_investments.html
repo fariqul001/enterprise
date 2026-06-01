@@ -12,7 +12,7 @@
                     <div class="card-body">
                         <h5 class="card-title text-primary">{{ investment.fund.name }}</h5>
                         <p class="card-text">
-                            <strong>Investment Amount:</strong> {{ investment.amount }}<br>
+                            <strong>Investment Amount:</strong> {{ investment.amount|floatformat:0 }}<br>
                             <strong>Invested Date:</strong> {{ investment.invested_date|date:'M d, Y' }}<br>
                             <strong>Status:</strong> <span class="badge bg-success">{{ investment.status }}</span>
                         </p>

@@ -321,12 +321,35 @@ def agreement_list(request):
     if request.user.role == 'admin':
         return redirect('accounts:admin_dashboard')
 
-    agreements = InvestorAgreement.objects.filter(kyc__user=request.user)
-    return render(request, 'accounts/agreement_list.html', {'agreements': agreements})
+    from accounts.models import FundAgreement
+    
+    # Get investor agreements (KYC)
+    investor_agreements = InvestorAgreement.objects.filter(kyc__user=request.user)
+    
+    # Get fund agreements
+    fund_agreements = FundAgreement.objects.filter(investor=request.user)
+    
+    return render(request, 'accounts/agreement_list.html', {
+        'investor_agreements': investor_agreements,
+        'fund_agreements': fund_agreements
+    })
 
 @login_required
 def agreement_download(request, pk):
     agreement = get_object_or_404(InvestorAgreement, pk=pk, kyc__user=request.user)
+    file_path = agreement.pdf.path
+    if not os.path.exists(file_path):
+        messages.error(request, 'Agreement file is not available.')
+        return redirect('accounts:agreement_list')
+    return FileResponse(open(file_path, 'rb'), as_attachment=True, filename=os.path.basename(file_path))
+
+
+@login_required
+def fund_agreement_download(request, pk):
+    """Download fund investment agreement"""
+    from accounts.models import FundAgreement
+    
+    agreement = get_object_or_404(FundAgreement, pk=pk, investor=request.user)
     file_path = agreement.pdf.path
     if not os.path.exists(file_path):
         messages.error(request, 'Agreement file is not available.')
@@ -365,6 +388,112 @@ def create_agreement_pdf(kyc):
     agreement, _ = InvestorAgreement.objects.get_or_create(kyc=kyc)
     agreement.pdf.name = f'agreements/{file_name}'
     agreement.save()
+    return agreement
+
+
+def create_fund_agreement_pdf(investment):
+    """Generate formal fund investment agreement"""
+    from accounts.models import FundAgreement
+    
+    agreement_dir = Path(settings.MEDIA_ROOT) / 'agreements'
+    agreement_dir.mkdir(parents=True, exist_ok=True)
+    file_name = f"fund_agreement_{investment.investor.username}_{investment.fund.name.replace(' ', '_')}_{timezone.now().strftime('%Y%m%d%H%M%S')}.pdf"
+    file_path = agreement_dir / file_name
+
+    pdf = FPDF()
+    pdf.add_page()
+    
+    # Header
+    pdf.set_font('Arial', 'B', 18)
+    pdf.cell(0, 15, 'FUND INVESTMENT AGREEMENT', ln=True, align='C')
+    pdf.ln(5)
+    
+    # Agreement Number and Date
+    pdf.set_font('Arial', '', 11)
+    pdf.cell(0, 8, f"Agreement ID: FA-{investment.id}-{timezone.now().strftime('%Y%m%d')}", ln=True)
+    pdf.cell(0, 8, f"Date: {timezone.now().strftime('%B %d, %Y')}", ln=True)
+    pdf.ln(8)
+    
+    # Investor Information
+    pdf.set_font('Arial', 'B', 12)
+    pdf.cell(0, 10, 'INVESTOR INFORMATION', ln=True, border=1)
+    pdf.set_font('Arial', '', 11)
+    investor_name = investment.investor.get_full_name() or investment.investor.username
+    pdf.multi_cell(0, 8, f"Name: {investor_name}")
+    pdf.multi_cell(0, 8, f"Email: {investment.investor.email}")
+    pdf.multi_cell(0, 8, f"Username: {investment.investor.username}")
+    pdf.multi_cell(0, 8, f"Registration Date: {investment.investor.date_joined.strftime('%B %d, %Y')}")
+    pdf.ln(5)
+    
+    # Fund Information
+    pdf.set_font('Arial', 'B', 12)
+    pdf.cell(0, 10, 'FUND DETAILS', ln=True, border=1)
+    pdf.set_font('Arial', '', 11)
+    pdf.multi_cell(0, 8, f"Fund Name: {investment.fund.name}")
+    pdf.multi_cell(0, 8, f"Status: {investment.fund.status.upper()}")
+    pdf.multi_cell(0, 8, f"Monthly Installment: {investment.fund.monthly_installment}")
+    pdf.multi_cell(0, 8, f"Expected Return: {investment.fund.expected_return}%")
+    if investment.fund.description:
+        pdf.multi_cell(0, 8, f"Description: {investment.fund.description[:100]}...")
+    pdf.ln(5)
+    
+    # Investment Details
+    pdf.set_font('Arial', 'B', 12)
+    pdf.cell(0, 10, 'INVESTMENT DETAILS', ln=True, border=1)
+    pdf.set_font('Arial', '', 11)
+    pdf.multi_cell(0, 8, f"Investment Status: Active")
+    pdf.multi_cell(0, 8, f"Subscription Approval Date: {timezone.now().strftime('%B %d, %Y at %H:%M')}")
+    pdf.multi_cell(0, 8, f"Payment Method: Monthly Installments")
+    pdf.ln(5)
+    
+    # Terms and Conditions
+    pdf.set_font('Arial', 'B', 12)
+    pdf.cell(0, 10, 'TERMS AND CONDITIONS', ln=True, border=1)
+    pdf.set_font('Arial', '', 10)
+    terms = [
+        "1. The investor agrees to invest in the fund as per the details mentioned above.",
+        "2. Monthly installment payments must be submitted on time as per the fund schedule.",
+        "3. All payments must be made through approved payment methods only.",
+        "4. The investor acknowledges that investment carries market risk.",
+        "5. The investor has completed KYC verification and all information is accurate.",
+        "6. The investor agrees to follow all fund rules and company policies.",
+        "7. Fund details and return rates are subject to change at company discretion.",
+        "8. In case of default, company reserves the right to suspend investment.",
+    ]
+    for term in terms:
+        pdf.multi_cell(0, 7, term)
+    pdf.ln(5)
+    
+    # Acknowledgment
+    pdf.set_font('Arial', 'B', 12)
+    pdf.cell(0, 10, 'ACKNOWLEDGMENT', ln=True, border=1)
+    pdf.set_font('Arial', '', 10)
+    pdf.multi_cell(0, 7, "The undersigned investor acknowledges that they have read, understood, and agree to all terms and conditions outlined in this agreement. The investor confirms that all provided information is true, accurate, and complete.")
+    pdf.ln(8)
+    
+    # Signature Section
+    pdf.set_font('Arial', '', 11)
+    pdf.cell(0, 8, f"Investor Name: {investor_name}", ln=True)
+    pdf.ln(15)
+    pdf.cell(0, 8, "Investor Signature: ___________________________    Date: ______________", ln=True)
+    pdf.ln(15)
+    pdf.cell(0, 8, "Admin Signature: ______________________________    Date: ______________", ln=True)
+    
+    pdf.output(str(file_path))
+    
+    # Create FundAgreement record
+    agreement, created = FundAgreement.objects.get_or_create(
+        investment=investment,
+        defaults={
+            'investor': investment.investor,
+            'fund': investment.fund,
+            'pdf': f'agreements/{file_name}'
+        }
+    )
+    if not created:
+        agreement.pdf.name = f'agreements/{file_name}'
+        agreement.save()
+    
     return agreement
 
 # INVESTOR VIEWS
@@ -440,41 +569,18 @@ def invest_in_fund(request, pk):
         return redirect('accounts:fund_list')
 
     if request.method == 'POST':
-        form = InvestmentForm(request.POST)
+        # Create a subscription request without amount — admin will approve
+        investment = Investment.objects.create(
+            investor=request.user,
+            fund=fund,
+            amount=0,
+            status=Investment.STATUS_PENDING
+        )
 
-        if form.is_valid():
-            investment = form.save(commit=False)
-
-            # assign from URL (NOT FORM)
-            investment.investor = request.user
-            investment.fund = fund
-            investment.status = 'pending'
-
-            # validation
-            if investment.amount < fund.minimum_investment:
-                messages.error(
-                    request,
-                    f'Minimum investment for this fund is {fund.minimum_investment}'
-                )
-                return redirect('accounts:invest_in_fund', pk=fund.pk)
-
-            investment.save()
-
-            messages.success(
-                request,
-                f'Investment created. Proceed to payment.'
-            )
-
-            return redirect('accounts:ssl_payment', pk=investment.pk)
-
-        else:
-            print(form.errors)  # DEBUG
-
-    else:
-        form = InvestmentForm()
+        messages.success(request, 'Subscription request submitted. Admin will review it.')
+        return redirect('accounts:fund_list')
 
     return render(request, 'accounts/invest_in_fund.html', {
-        'form': form,
         'fund': fund
     })
 
@@ -702,7 +808,63 @@ def admin_add_fund(request):
 def admin_fund_applications(request):
     if request.user.role != 'admin':
         return HttpResponseForbidden('Access denied')
-    applications = Investment.objects.all()
+    # Handle approve/reject actions
+    if request.method == 'POST':
+        inv_id = request.POST.get('investment_id')
+        action = request.POST.get('action')
+        admin_note = request.POST.get('admin_note', '')
+
+        investment = get_object_or_404(Investment, id=inv_id)
+
+        if action == 'approve':
+            investment.status = Investment.STATUS_ACTIVE
+            investment.paid_at = timezone.now()
+            investment.save()
+
+            # Generate fund agreement
+            try:
+                agreement = create_fund_agreement_pdf(investment)
+                agreement_generated = True
+            except Exception as e:
+                agreement_generated = False
+                print(f"Error generating agreement: {str(e)}")
+
+            # Optionally update fund totals (initial subscription treated as zero-paid until payments come in)
+            # Send email to investor
+            subject = 'Subscription Request Approved'
+            message = f"""
+Dear {investment.investor.username},
+
+Your subscription request for {investment.fund.name} has been approved by the admin. Your investment is now active and you can submit monthly installment payments.
+
+You can download your fund investment agreement from the "Download Agreements" section in your dashboard.
+
+Best regards,
+Enterprise Fund Team
+"""
+            EmailMessage(subject, message, settings.EMAIL_HOST_USER, [investment.investor.email]).send()
+            messages.success(request, f'Investment request for {investment.investor.username} approved. Fund agreement generated.')
+
+        elif action == 'reject':
+            investment.status = Investment.STATUS_FAILED
+            investment.save()
+            subject = 'Subscription Request Rejected'
+            message = f"""
+Dear {investment.investor.username},
+
+Your subscription request for {investment.fund.name} has been rejected by the admin.
+
+Note: {admin_note}
+
+Best regards,
+Enterprise Fund Team
+"""
+            EmailMessage(subject, message, settings.EMAIL_HOST_USER, [investment.investor.email]).send()
+            messages.success(request, f'Investment request for {investment.investor.username} rejected.')
+
+        return redirect('accounts:admin_fund_applications')
+
+    applications = Investment.objects.all().order_by('-created_at')
     return render(request, 'accounts/admin_fund_applications.html', {'applications': applications})
 
 
@@ -876,32 +1038,24 @@ def investment_report_detail(request, investment_id):
         investment=investment
     ).order_by('payment_date')
 
-    payment_history = []
-    total_paid = float(investment.amount)
+    # Calculate only approved payment totals for the investor
+    total_paid_value = payments.filter(status='approved').aggregate(total=models.Sum('amount'))['total'] or 0
+    installments_paid = payments.filter(status='approved').count()
 
-    # Initial investment
-    payment_history.append({
-        'type': 'Initial Investment',
-        'amount': investment.amount,
-        'date': investment.paid_at or investment.invested_date,
-        'status': 'Completed' if investment.status == 'active' else investment.status
-    })
-
-    # Additional payments
-    for payment in payments:
-        payment_history.append({
-            'type': 'Additional Payment',
+    payment_history = [
+        {
             'amount': payment.amount,
             'date': payment.payment_date,
             'status': payment.status
-        })
-        if payment.status == 'approved':
-            total_paid += float(payment.amount)
+        }
+        for payment in payments
+    ]
 
     context = {
         'investment': investment,
         'payment_history': payment_history,
-        'total_paid': total_paid,
+        'total_paid': float(total_paid_value) if total_paid_value else 0,
+        'installments_paid': installments_paid,
     }
 
     return render(request, 'accounts/investment_report_detail.html', context)
@@ -927,7 +1081,10 @@ def admin_investor_funds_overview(request):
         
         # Calculate metrics
         total_funds = investments.filter(status='active').count()
-        total_amount_paid = investments.aggregate(total=models.Sum('amount'))['total'] or 0
+        total_amount_paid = Payment.objects.filter(
+            investor=investor,
+            status='approved'
+        ).aggregate(total=models.Sum('amount'))['total'] or 0
         
         # Count transactions
         total_transactions = Payment.objects.filter(
@@ -977,22 +1134,30 @@ def admin_investor_detail(request, investor_id):
 
         approved_total = payments.filter(status='approved').aggregate(total=Sum('amount'))['total'] or 0
 
-        total_amount = inv.amount + approved_total
-        total_paid = total_amount  # Since approved payments are added to investment.amount
+        # Total paid is only the sum of approved payments
+        total_paid = float(approved_total) if approved_total else 0
+        
+        # Total amount represents the fund's monthly installment amount
+        total_amount = float(inv.fund.monthly_installment) if inv.fund.monthly_installment else 0
 
         investment_details.append({
             'investment': inv,
-            'paid_installments': paid_payments,  # Using payments instead
+            'paid_installments': paid_payments,
             'total_installments': total_payments,
             'total_amount': total_amount,
             'total_paid': total_paid,
         })
     
+    total_paid_sum = sum(detail['total_paid'] for detail in investment_details)
+    total_installments = sum(detail['total_installments'] for detail in investment_details)
+
     context = {
         'investor': investor,
         'kyc': kyc,
         'investment_details': investment_details,
         'total_funds': active_investments.count(),
+        'total_paid': total_paid_sum,
+        'total_installments': total_installments,
     }
     
     return render(request, 'accounts/admin_investor_detail.html', context)
@@ -1021,13 +1186,37 @@ def payment_success(request):
             transaction.save()
 
             investment = transaction.investment
-            investment.status = "active"
-            investment.transaction_id = tran_id
-            investment.save()
 
-            fund = investment.fund
-            fund.invested_amount += investment.amount
-            fund.save()
+            # If this transaction amount equals the investment amount and investment not active,
+            # treat it as initial investment payment. Otherwise treat it as a monthly installment.
+            if float(transaction.amount) == float(investment.amount) and investment.status != Investment.STATUS_ACTIVE:
+                investment.status = Investment.STATUS_ACTIVE
+                investment.transaction_id = tran_id
+                investment.paid_at = timezone.now()
+                investment.save()
+
+                fund = investment.fund
+                fund.invested_amount += transaction.amount
+                fund.save()
+
+            else:
+                # Monthly installment: record Payment and update totals
+                payment = Payment.objects.create(
+                    investor=investment.investor,
+                    investment=investment,
+                    amount=transaction.amount,
+                    status='approved',
+                    reviewed_at=timezone.now(),
+                    admin_note='Online payment via gateway'
+                )
+
+                # Add to investment and fund totals
+                investment.amount += transaction.amount
+                investment.save()
+
+                fund = investment.fund
+                fund.invested_amount += transaction.amount
+                fund.save()
 
             messages.success(request, "Payment successful!")
         else:
@@ -1059,48 +1248,33 @@ import requests
 def ssl_payment(request, pk):
     investment = get_object_or_404(Investment, pk=pk)
 
+    # Allow overriding amount (for monthly installments) via GET/POST param 'amount'
+    requested_amount = request.POST.get('amount') or request.GET.get('amount')
+    try:
+        amt = float(requested_amount) if requested_amount else float(investment.amount)
+    except (ValueError, TypeError):
+        amt = float(investment.amount)
+
     tran_id = f"INV{investment.id}{int(timezone.now().timestamp())}"
 
     transaction = Transaction.objects.create(
         investment=investment,
         tran_id=tran_id,
-        amount=investment.amount,
+        amount=amt,
         status='initiated'
     )
 
-    store_id = settings.SSLCOMMERZ_STORE_ID
-    store_pass = settings.SSLCOMMERZ_STORE_PASSWORD
+    # Use helper to initiate payment with appropriate URLs
+    success_url = request.build_absolute_uri('/accounts/payment/success/')
+    fail_url = request.build_absolute_uri('/accounts/payment/fail/')
+    cancel_url = request.build_absolute_uri('/accounts/payment/cancel/')
 
-    payload = {
-        'store_id': store_id,
-        'store_passwd': store_pass,
-        'total_amount': float(investment.amount),
-        'currency': "BDT",
-        'tran_id': tran_id,
+    response = initiate_payment(investment=investment, amount=amt, success_url=success_url, fail_url=fail_url, cancel_url=cancel_url, tran_id=tran_id)
 
-        'success_url': request.build_absolute_uri('/accounts/payment/success/'),
-        'fail_url': request.build_absolute_uri('/accounts/payment/fail/'),
-        'cancel_url': request.build_absolute_uri('/accounts/payment/cancel/'),
+    # Debug: if gateway returned error info, include it in the message to help troubleshooting
+    if response.get("status") == "SUCCESS" and response.get("GatewayPageURL"):
+        return redirect(response["GatewayPageURL"])
 
-        'cus_name': request.user.username,
-        'cus_email': request.user.email,
-        'cus_add1': "Dhaka",
-        'cus_phone': "01700000000",
-        'shipping_method': "NO",
-        'product_name': investment.fund.name,
-        'product_category': "Investment",
-        'product_profile': "general",
-    }
-
-    response = requests.post(
-        "https://sandbox.sslcommerz.com/gwprocess/v4/api.php",
-        data=payload
-    )
-
-    data = response.json()
-
-    if data.get("status") == "SUCCESS":
-        return redirect(data["GatewayPageURL"])
-    else:
-        messages.error(request, "Payment gateway error")
-        return redirect("accounts:fund_list")
+    err_msg = response.get('failedreason') or response.get('error') or response.get('failedreason') or str(response)
+    messages.error(request, f"Payment gateway error: {err_msg}")
+    return redirect("accounts:fund_list")

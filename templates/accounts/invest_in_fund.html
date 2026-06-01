@@ -21,17 +21,15 @@
 
                     <p><strong>Fund Name:</strong> {{ fund.name }}</p>
                     <p><strong>Expected Return:</strong> {{ fund.expected_return }}</p>
-                    <p><strong>Minimum Downpayment:</strong> {{ fund.minimum_investment }}</p>
+                    <p><strong>Monthly Installment:</strong> {{ fund.monthly_installment }}</p>
 
                     <hr>
 
                     <form method="POST">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit" class="btn btn-success">
-        Down Payment Now
-    </button>
-</form>
+                        {% csrf_token %}
+                        <p class="text-muted">By submitting a subscription request an administrator will review and approve or reject your request. After approval you can make monthly installment payments.</p>
+                        <button type="submit" class="btn btn-success">Submit Subscription Request</button>
+                    </form>
 
                 </div>
 

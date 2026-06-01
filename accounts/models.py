@@ -72,8 +72,8 @@ class Fund(models.Model):
 
     name = models.CharField(max_length=255)
     description = models.TextField()
-    minimum_investment = models.DecimalField(max_digits=10, decimal_places=2)
     expected_return = models.CharField(max_length=100)
+    monthly_installment = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     invested_amount = models.DecimalField(max_digits=15, decimal_places=2, default=0)
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default=STATUS_ACTIVE)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -104,7 +104,9 @@ class Investment(models.Model):
         related_name='investments'
     )
 
-    amount = models.DecimalField(max_digits=15, decimal_places=2)
+    # For subscription requests we don't require an initial amount — default to 0
+    # investors will pay monthly installments after admin approval
+    amount = models.DecimalField(max_digits=15, decimal_places=2, default=0)
 
     invested_date = models.DateTimeField(auto_now_add=True)
 
@@ -169,3 +171,15 @@ class Transaction(models.Model):
     amount = models.DecimalField(max_digits=15, decimal_places=2)
     status = models.CharField(max_length=20, default='initiated')
     created_at = models.DateTimeField(auto_now_add=True)
+
+
+class FundAgreement(models.Model):
+    """Formal investment agreement generated when admin approves fund subscription"""
+    investment = models.OneToOneField(Investment, on_delete=models.CASCADE, related_name='fund_agreement')
+    investor = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='fund_agreements')
+    fund = models.ForeignKey(Fund, on_delete=models.CASCADE, related_name='agreements')
+    pdf = models.FileField(upload_to='agreements/')
+    generated_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Fund Agreement: {self.investor.username} - {self.fund.name}"

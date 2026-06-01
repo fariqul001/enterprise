@@ -51,7 +51,7 @@
                                     <div style="color: #1e3a8a; font-weight: 500;">{{ payment.investment.fund.name }}</div>
                                 </td>
                                 <td style="padding: 20px;">
-                                    <div style="font-size: 1.1rem; font-weight: 700; color: #10b981;">{{ payment.amount }}</div>
+                                    <div style="font-size: 1.1rem; font-weight: 700; color: #10b981;">{{ payment.amount|floatformat:0 }}</div>
                                 </td>
                                 <td style="padding: 20px;">
                                     {% if payment.bank_slip %}

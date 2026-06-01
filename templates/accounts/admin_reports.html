@@ -41,7 +41,7 @@
             <div class="card report-card shadow-sm">
                 <div class="card-body text-center">
                     <h6>Total Invested</h6>
-                    <h3>{{ total_invested|floatformat:2 }}</h3>
+                    <h3>{{ total_invested|floatformat:0 }}</h3>
                     <p class="text-muted">Across all funds</p>
                 </div>
             </div>
@@ -170,7 +170,7 @@
                     <ul class="list-group list-group-flush">
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             <span>Total Investment Amount</span>
-                            <strong>{{ total_invested }}</strong>
+                            <strong>{{ total_invested|floatformat:0 }}</strong>
                         </li>
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             <span>Active Funds</span>

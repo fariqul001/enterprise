@@ -4,28 +4,37 @@
 
 {% block content %}
 <div class="container my-5">
-    <div class="card shadow-sm">
-        <div class="card-header bg-secondary text-white">
-            <h4 class="mb-0"><i class="fas fa-file-alt me-2"></i>Your Investor Agreements</h4>
+    <h2 class="mb-4"><i class="fas fa-file-contract me-2"></i>Your Legal Agreements</h2>
+
+    <!-- Fund Investment Agreements -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-handshake me-2"></i>Fund Investment Agreements</h5>
         </div>
         <div class="card-body">
-            {% if agreements %}
+            {% if fund_agreements %}
                 <div class="table-responsive">
-                    <table class="table align-middle">
-                        <thead>
+                    <table class="table align-middle table-hover">
+                        <thead class="table-light">
                             <tr>
-                                <th>Agreement</th>
-                                <th>Generated</th>
-                                <th></th>
+                                <th>Fund Name</th>
+                                <th>Investor</th>
+                                <th>Generated Date</th>
+                                <th>Action</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% for agreement in agreements %}
+                            {% for agreement in fund_agreements %}
                                 <tr>
-                                    <td>Investor Agreement</td>
+                                    <td>
+                                        <strong>{{ agreement.fund.name }}</strong>
+                                    </td>
+                                    <td>{{ agreement.investor.username }}</td>
                                     <td>{{ agreement.generated_at|date:'M d, Y H:i' }}</td>
                                     <td>
-                                        <a href="{% url 'accounts:agreement_download' agreement.pk %}" class="btn btn-sm btn-primary">Download</a>
+                                        <a href="{% url 'accounts:fund_agreement_download' agreement.pk %}" class="btn btn-sm btn-primary" target="_blank">
+                                            <i class="fas fa-download me-1"></i>Download PDF
+                                        </a>
                                     </td>
                                 </tr>
                             {% endfor %}
@@ -33,9 +42,60 @@
                     </table>
                 </div>
             {% else %}
-                <div class="alert alert-info">No agreements are available yet. Complete KYC and wait for approval to generate your legal agreement.</div>
+                <div class="alert alert-info mb-0">
+                    <i class="fas fa-info-circle me-2"></i>No fund investment agreements yet. Fund agreements are generated when your subscription request is approved by the admin.
+                </div>
             {% endif %}
         </div>
+    </div>
+
+    <!-- Investor KYC Agreements -->
+    <div class="card shadow-sm">
+        <div class="card-header bg-secondary text-white">
+            <h5 class="mb-0"><i class="fas fa-certificate me-2"></i>KYC Investor Agreements</h5>
+        </div>
+        <div class="card-body">
+            {% if investor_agreements %}
+                <div class="table-responsive">
+                    <table class="table align-middle table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Agreement Type</th>
+                                <th>Generated</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for agreement in investor_agreements %}
+                                <tr>
+                                    <td>
+                                        <strong>KYC Investor Agreement</strong><br>
+                                        <small class="text-muted">{{ agreement.kyc.get_status_display }}</small>
+                                    </td>
+                                    <td>{{ agreement.generated_at|date:'M d, Y H:i' }}</td>
+                                    <td>
+                                        <a href="{% url 'accounts:agreement_download' agreement.pk %}" class="btn btn-sm btn-success" target="_blank">
+                                            <i class="fas fa-download me-1"></i>Download PDF
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="alert alert-info mb-0">
+                    <i class="fas fa-info-circle me-2"></i>No KYC agreements available yet. Complete your KYC application and wait for approval to generate your investor agreement.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Info Box -->
+    <div class="alert alert-light border mt-4" role="alert">
+        <h6 class="alert-heading"><i class="fas fa-question-circle me-2"></i>About Your Agreements</h6>
+        <p class="mb-2"><strong>Fund Investment Agreements:</strong> Generated automatically when your fund subscription request is approved. These formal documents outline the fund details, investment terms, and your obligations.</p>
+        <p class="mb-0"><strong>KYC Investor Agreements:</strong> Generated when your KYC verification is completed and approved. This establishes your legal investor status.</p>
     </div>
 </div>
 {% endblock %}
